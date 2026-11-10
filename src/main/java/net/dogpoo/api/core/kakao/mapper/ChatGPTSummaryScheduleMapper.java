@@ -19,10 +19,10 @@ public interface ChatGPTSummaryScheduleMapper {
 	@Select("SELECT MAX(userSeq) FROM DOGPOO_AI_CHATBOT_HISTORY WHERE GROUP BY userId")
 	public int getLastChatSeq();
 	
-	@Select("SELECT COUNT(*) FROM DOGPOO_AI_CHATBOT_SUMMARY WHERE userId = #{userId} AND mode = #{mode} AND endSeq = ${lastSeq};")
+    @Select("SELECT COUNT(*) FROM DOGPOO_AI_CHATBOT_SUMMARY WHERE userId = #{userId} AND mode = #{mode} AND endSeq = #{lastSeq};")
 	public boolean isExistSummary(@Param("userId") String userId, @Param("mode") String mode, @Param("lastSeq") int lastSeq);
 	
-	@Select("SELECT COUNT(*) FROM DOGPOO_AI_CHATBOT_LONGTERM WHERE userId = #{userId} AND mode = #{mode} AND endSeq = ${lastSeq};")
+    @Select("SELECT COUNT(*) FROM DOGPOO_AI_CHATBOT_LONGTERM WHERE userId = #{userId} AND mode = #{mode} AND endSeq = #{lastSeq};")
 	public boolean isExistLongterm(@Param("userId") String userId, @Param("mode") String mode, @Param("lastSeq") int lastSeq);
 	
 	public List<HashMap<String, Object>> getSummaryTargetList(@Param("summarySize") int summarySize);

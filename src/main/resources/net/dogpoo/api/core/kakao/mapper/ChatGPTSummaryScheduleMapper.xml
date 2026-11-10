@@ -18,15 +18,15 @@
 		  userId,
 		  mode,
 		  CAST(CAST(
-		      TRUNCATE(MAX(chatSeq) / ${summarySize}, 0) AS UNSIGNED
-		    ) * ${summarySize} AS VARCHAR (10)
+              TRUNCATE(MAX(chatSeq) / #{summarySize}, 0) AS UNSIGNED
+            ) * #{summarySize} AS VARCHAR (10)
 		  ) AS lastSeq 
 		FROM
 		  DOGPOO_AI_CHATBOT_HISTORY 
 		GROUP BY userId, mode
 		HAVING CAST(
-		    TRUNCATE(MAX(chatSeq) / ${summarySize}, 0) AS UNSIGNED
-		  ) * ${summarySize} > 0 
+            TRUNCATE(MAX(chatSeq) / #{summarySize}, 0) AS UNSIGNED
+          ) * #{summarySize} > 0
 	</select>
 	<insert id="insertLongtermContent" useGeneratedKeys="true" keyProperty="idx" parameterType="KakaoChatbotSummaryModel">
 		INSERT INTO DOGPOO_AI_CHATBOT_LONGTERM (mode, endSeq, userId, content) 
@@ -38,15 +38,15 @@
 		  userId,
 		  mode,
 		  CAST(CAST(
-		      TRUNCATE(MAX(summarySeq) / ${longtermSize}, 0) AS UNSIGNED
-		    ) * ${longtermSize} AS VARCHAR (10)
+              TRUNCATE(MAX(summarySeq) / #{longtermSize}, 0) AS UNSIGNED
+            ) * #{longtermSize} AS VARCHAR (10)
 		  ) AS lastSeq 
 		FROM
 		  DOGPOO_AI_CHATBOT_SUMMARY
 		GROUP BY userId, mode
 		HAVING CAST(
-		    TRUNCATE(MAX(summarySeq) / ${longtermSize}, 0) AS UNSIGNED
-		  ) * ${longtermSize} > 0 ;
+            TRUNCATE(MAX(summarySeq) / #{longtermSize}, 0) AS UNSIGNED
+          ) * #{longtermSize} > 0 ;
 	</select>
 </mapper>
 

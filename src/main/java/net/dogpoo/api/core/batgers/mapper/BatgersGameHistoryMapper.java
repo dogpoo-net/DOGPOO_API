@@ -17,7 +17,7 @@ public interface BatgersGameHistoryMapper {
 	
 	public List<HashMap<String, Object>> getPlayersPUBGRelativeRecordList();
 	
-	@Select("SELECT idx, gamers, IFNULL(healers, '') AS healers, isLive, bet, DATE_FORMAT(regDate, '%Y-%m-%d %T') AS regDate, DATE_FORMAT(endDate, '%Y-%m-%d %T') AS endDate FROM BATGERS_MATCH_PARENT ORDER BY idx DESC LIMIT ${page}, ${page+8}")
+    @Select("<script><bind name='limit' value='page + 8'/>SELECT idx, gamers, IFNULL(healers, '') AS healers, isLive, bet, DATE_FORMAT(regDate, '%Y-%m-%d %T') AS regDate, DATE_FORMAT(endDate, '%Y-%m-%d %T') AS endDate FROM BATGERS_MATCH_PARENT ORDER BY idx DESC LIMIT #{page}, #{limit}</script>")
 	public List<BatgersGameHistoryListModel> getGameHistoryList(@Param("page") int page);
 
 }

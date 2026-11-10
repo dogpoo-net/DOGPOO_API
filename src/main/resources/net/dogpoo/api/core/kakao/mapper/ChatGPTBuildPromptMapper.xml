@@ -30,7 +30,7 @@
 		    AND LENGTH(input) > 0 
 		    AND LENGTH(output) > 0 
 		  ORDER BY idx DESC 
-		  LIMIT ${memoryLimit}) AS a 
+          LIMIT #{memoryLimit}) AS a
 		ORDER BY idx
 	</select>
 	<select id="getChatbotSummaryContentList" parameterType="java.lang.String" resultType="java.lang.String">
@@ -43,7 +43,7 @@
 		    DOGPOO_AI_CHATBOT_SUMMARY 
 		  WHERE userId = #{userId} AND mode = #{mode}
 		  ORDER BY endSeq 
-		  LIMIT ${summaryLimit}) AS a 
+          LIMIT #{summaryLimit}) AS a
 	</select>
 	<select id="getChatSummaryTargetList" parameterType="java.lang.String" resultType="KakaoChatbotConversationModel">
 		SELECT 
@@ -56,8 +56,8 @@
 		WHERE userId = #{userId} AND mode = #{mode}
 		  AND LENGTH(output) > 0 
 		  AND (
-		    chatSeq > ${startSeq} 
-		    <![CDATA[AND chatSeq <= ${lastSeq}]]>
+            chatSeq > #{startSeq}
+            <![CDATA[AND chatSeq <= #{lastSeq}]]>
 		  )
 	</select>
 	<select id="getLongtermTargetSummaryList" parameterType="java.lang.String" resultType="java.lang.String">
@@ -71,8 +71,8 @@
 		  WHERE userId = #{userId}
 		  AND mode = #{mode}
 		  AND (
-		    summarySeq > ${startSeq}
-		    <![CDATA[AND summarySeq <= ${lastSeq}]]>
+            summarySeq > #{startSeq}
+            <![CDATA[AND summarySeq <= #{lastSeq}]]>
 		  )
 		) AS a
 	</select>

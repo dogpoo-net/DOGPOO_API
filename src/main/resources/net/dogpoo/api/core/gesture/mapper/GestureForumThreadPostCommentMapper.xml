@@ -3,11 +3,11 @@
 <mapper namespace="net.dogpoo.api.core.gesture.mapper.GestureForumThreadPostCommentMapper">
 	<insert id="insertForumThreadPostComment" parameterType="java.util.HashMap">
 		INSERT INTO GESTURE_THREAD_POST_COMMENT (postNo, threadNo, comment, commentWriter)
-		VALUES (${postNo}, ${threadNo}, #{comment}, #{commentWriter})
+        VALUES (#{postNo}, #{threadNo}, #{comment}, #{commentWriter})
 	</insert>
 	<update id="updateForumThreadPostComment" parameterType="java.util.HashMap">
 		UPDATE GESTURE_THREAD_POST_COMMENT SET comment = #{comment}, modDate = NOW()
-		WHERE commentNo = ${commentNo}
+        WHERE commentNo = #{commentNo}
 		  AND (commentWriter = #{commentWriter} OR #{commentWriter} = 0)
 	</update>
 	<select id="getForumThreadPostCommentList" parameterType="java.util.HashMap" resultType="GestureForumThreadPostCommentModel">
@@ -25,21 +25,21 @@
 		  GESTURE_THREAD_POST_COMMENT AS a
 		  LEFT JOIN GESTURE_FORUM_USER AS b
 		  ON a.commentWriter = b.ccode
-		WHERE threadNo = ${threadNo}
-		  AND postNo = ${postNo}
+        WHERE threadNo = #{threadNo}
+          AND postNo = #{postNo}
 		  AND isRemove = 0
 		  ORDER BY commentNo ASC
 	</select>
 	<delete id="deleteForumThreadPostComment" parameterType="java.util.HashMap">
 		UPDATE GESTURE_THREAD_POST_COMMENT SET isRemove = 1, rmDate = NOW()
-		WHERE threadNo = ${threadNo}
-		  AND postNo = ${postNo}
-		  AND commentNo = ${commentNo}
+        WHERE threadNo = #{threadNo}
+          AND postNo = #{postNo}
+          AND commentNo = #{commentNo}
 		  AND (commentWriter = #{commentWriter} OR #{commentWriter} = 0)
 <!-- 		DELETE FROM GESTURE_THREAD_POST_COMMENT -->
-<!-- 		WHERE threadNo = ${threadNo} -->
-<!-- 		  AND postNo = ${postNo} -->
-<!-- 		  AND commentNo = ${commentNo} -->
+<!-- 		WHERE threadNo = #{threadNo} -->
+<!-- 		  AND postNo = #{postNo} -->
+<!-- 		  AND commentNo = #{commentNo} -->
 <!-- 		  AND (commentWriter = #{commentWriter} OR #{commentWriter} = 0) -->
 	</delete>
 </mapper>

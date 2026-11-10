@@ -55,7 +55,7 @@
 		  		</choose>
 		        <choose>
 		  			<when test="dateRange != null and dateRange > 0">
-		  				AND regDate >= DATE_SUB(NOW(), INTERVAL ${dateRange} MONTH)
+                        AND regDate >= DATE_SUB(NOW(), INTERVAL #{dateRange} MONTH)
 		  			</when>
 		  		</choose>
 		      GROUP BY parentCd, playerNo) s 
@@ -83,7 +83,7 @@
 			  		</choose>
 				  	<choose>
 			  			<when test="dateRange != null and dateRange > 0">
-			  				AND regDate >= DATE_SUB(NOW(), INTERVAL ${dateRange} MONTH)
+                            AND regDate >= DATE_SUB(NOW(), INTERVAL #{dateRange} MONTH)
 			  			</when>
 			  		</choose>
 		          GROUP BY parentCd, playerNo) a 

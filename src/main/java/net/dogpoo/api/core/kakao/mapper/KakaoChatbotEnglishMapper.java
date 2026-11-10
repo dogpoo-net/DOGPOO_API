@@ -19,7 +19,7 @@ public interface KakaoChatbotEnglishMapper {
 	
 	public int insertChatbotWholeConversation(KakaoChatbotConversationModel model);
 	
-	@Update("UPDATE DOGPOO_AI_CHATBOT_HISTORY SET output = #{output}, inputTokens = ${inputTokens}, outputTokens = ${outputTokens}, totalTokens = ${totalTokens} WHERE idx = #{idx}")
+    @Update("UPDATE DOGPOO_AI_CHATBOT_HISTORY SET output = #{output}, inputTokens = #{inputTokens}, outputTokens = #{outputTokens}, totalTokens = #{totalTokens} WHERE idx = #{idx}")
 	public int updateChatbotAIAnswerContent(KakaoChatbotConversationModel model);
 	
 	@Select("SELECT output FROM DOGPOO_AI_CHATBOT_HISTORY WHERE idx = #{idx}")

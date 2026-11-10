@@ -53,31 +53,34 @@ public interface GestureForumThreadPostMapper {
 	
 	public int removeForumThreadWholeData(HashMap<String, Object> paramMap);
 	
-	@Insert("INSERT INTO GESTURE_THREAD_POST_LIKE VALUES (${threadNo}, ${postNo}, ${ccode}, ${isPostLike})")
+    @Insert("INSERT INTO GESTURE_THREAD_POST_LIKE VALUES (#{threadNo}, #{postNo}, #{ccode}, #{isPostLike})")
 	public int insertForumThreadPostLike(HashMap<String, Object> paramMap);
 	
-	@Select("SELECT COUNT(*) FROM GESTURE_THREAD_POST_LIKE WHERE threadNo = ${threadNo} AND postNo = ${postNo} AND ccode = ${ccode}")
+    @Select("SELECT COUNT(*) FROM GESTURE_THREAD_POST_LIKE WHERE threadNo = #{threadNo} AND postNo = #{postNo} AND ccode = #{ccode}")
 	public boolean getFourmThreadPostLikeDuplicateCheck(HashMap<String, Object> paramMap);
 	
-	@Select("SELECT isPostLike FROM GESTURE_THREAD_POST_LIKE WHERE threadNo = ${threadNo} AND postNo = ${postNo} AND ccode = ${ccode}")
+    @Select("SELECT isPostLike FROM GESTURE_THREAD_POST_LIKE WHERE threadNo = #{threadNo} AND postNo = #{postNo} AND ccode = #{ccode}")
 	public int isPostLike(HashMap<String, Object> paramMap);
 	
-	@Delete("DELETE FROM GESTURE_THREAD_POST_LIKE WHERE threadNo = ${threadNo} AND postNo = ${postNo} AND ccode = ${ccode}")
+    @Delete("DELETE FROM GESTURE_THREAD_POST_LIKE WHERE threadNo = #{threadNo} AND postNo = #{postNo} AND ccode = #{ccode}")
 	public int deleteForumThreadPostLike(HashMap<String, Object> paramMap);
 	
-	@Update("UPDATE GESTURE_THREAD_POST SET ${target} = ${target} ${cnt} WHERE postNo = ${postNo} AND threadNo = ${threadNo}")
+    @Update("<script><bind name='delta' value='@net.dogpoo.api.common.util.MapperSqlSafety@delta(cnt)'/>"
+        + "<bind name='column' value='@net.dogpoo.api.common.util.MapperSqlSafety@counter(target)'/>"
+        + "UPDATE GESTURE_THREAD_POST SET <choose><when test='column == &quot;likeCnt&quot;'>likeCnt = likeCnt</when>"
+        + "<otherwise>dislikeCnt = dislikeCnt</otherwise></choose> + #{delta} WHERE postNo = #{postNo} AND threadNo = #{threadNo}</script>")
 	public int updateForumThreadPostLikeCnt(HashMap<String, Object> paramMap);
 	
-	@Select("SELECT COUNT(*) FROM GESTURE_THREAD_HEAD_LIKE WHERE threadNo = ${threadNo} AND ccode = ${ccode}")
+    @Select("SELECT COUNT(*) FROM GESTURE_THREAD_HEAD_LIKE WHERE threadNo = #{threadNo} AND ccode = #{ccode}")
 	public boolean isAlreadyForumThreadLike(HashMap<String, Object> paramMap);
 	
-	@Insert("INSERT INTO GESTURE_THREAD_HEAD_LIKE VALUES (${threadNo}, ${ccode})")
+    @Insert("INSERT INTO GESTURE_THREAD_HEAD_LIKE VALUES (#{threadNo}, #{ccode})")
 	public int insertForumThreadLike(HashMap<String, Object> paramMap);
 	
-	@Delete("DELETE FROM GESTURE_THREAD_HEAD_LIKE WHERE threadNo = ${threadNo} AND ccode = ${ccode}")
+    @Delete("DELETE FROM GESTURE_THREAD_HEAD_LIKE WHERE threadNo = #{threadNo} AND ccode = #{ccode}")
 	public int deleteForumThreadLike(HashMap<String, Object> paramMap);
 	
-	@Update("UPDATE GESTURE_THREAD_HEAD SET threadLikeCnt = threadLikeCnt ${cnt} WHERE threadNo = ${threadNo}")
+    @Update("<script><bind name='delta' value='@net.dogpoo.api.common.util.MapperSqlSafety@delta(cnt)'/>UPDATE GESTURE_THREAD_HEAD SET threadLikeCnt = threadLikeCnt + #{delta} WHERE threadNo = #{threadNo}</script>")
 	public int updateForumThreadLikeCnt(HashMap<String, Object> paramMap);
 	
 }

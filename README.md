@@ -52,8 +52,23 @@ claim DB functionality. Original dev/local DB hosts could not be resolved from t
 cloud machine; live TCP connection was refused. Configure network access to a test
 DB before validating all database-backed routes, authentication and scheduled jobs.
 
-Remaining legacy risks requiring dedicated compatibility tests: MyBatis `${...}`
-SQL interpolation (including dynamic ordering), broad anonymous URL patterns,
+Remaining legacy risks requiring dedicated compatibility tests: broad anonymous URL patterns,
 third-party callbacks and integrations, ownership/authorization checks, legacy
 JJWT 0.9.1 (retained with JAXB for existing token compatibility), and business logic
 validation. This migration is not a completed security audit or production sign-off.
+
+## Mapper SQL hardening
+
+All XML and annotation SQL values now use JDBC bindings. LIKE searches bind the
+keyword inside CONCAT while preserving existing `%`/`_` wildcard semantics.
+Sorting accepts threadNo, threadTitle, threadViews, threadLikeCnt, threadOwner,
+openDate, answerCnt and threadOpenDate; unknown/missing keys fall back to openDate.
+Counter columns accept only likeCnt/dislikeCnt and adjustments only `+ 1`/`- 1`;
+unsupported values fail before SQL execution. Legacy history pagination retains
+its original offset and `page + 8` count, computed by MyBatis before binding.
+
+Five mapper security tests load the actual XML/annotation statements without a
+DB and check parameterization, ordering, counter rejection, pagination arithmetic
+and absence of raw substitution in mapper sources. Together with the two existing
+compatibility tests, seven tests pass. Live MariaDB execution remains unverified;
+this change addresses SQL injection, not object ownership or endpoint access policy.

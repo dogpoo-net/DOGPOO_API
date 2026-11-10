@@ -13,7 +13,7 @@ public interface BatgersStatisticsMapper {
 	@Select("SELECT playerNo, playerNm FROM BATGERS_PLAYER_LIST")
 	public List<HashMap<String, Object>> getPlayerNoList();
 	
-	@Select("SELECT ROUND(ratingPUBG) FROM BATGERS_PLAYER_DAILY_SCORE WHERE playerNo = ${playerNo} LIMIT 30")
+    @Select("SELECT ROUND(ratingPUBG) FROM BATGERS_PLAYER_DAILY_SCORE WHERE playerNo = #{playerNo} LIMIT 30")
 	public List<Integer> getDailyScoreList(@Param("playerNo") int playerNo);
 	
 	@Select("SELECT DATE_FORMAT(regDate, '%m-%d') AS regDate FROM (SELECT regDate FROM BATGERS_PLAYER_DAILY_SCORE GROUP BY regDate ORDER BY regDate DESC LIMIT 30) AS t ORDER BY regDate ASC")

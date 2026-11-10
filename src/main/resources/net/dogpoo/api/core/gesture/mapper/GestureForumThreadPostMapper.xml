@@ -2,6 +2,21 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="net.dogpoo.api.core.gesture.mapper.GestureForumThreadPostMapper">
 
+    <!-- SQL identifiers cannot be bound. Unknown sort keys use newest first. -->
+    <sql id="safeThreadOrder">
+    <choose>
+        <when test="orderTarget == 'threadNo'">threadNo</when>
+        <when test="orderTarget == 'threadTitle'">threadTitle</when>
+        <when test="orderTarget == 'threadViews'">threadViews</when>
+        <when test="orderTarget == 'threadLikeCnt'">threadLikeCnt</when>
+        <when test="orderTarget == 'threadOwner'">threadOwner</when>
+        <when test="orderTarget == 'openDate'">openDate</when>
+        <when test="orderTarget == 'answerCnt'">answerCnt</when>
+        <when test="orderTarget == 'threadOpenDate'">threadOpenDate</when>
+        <otherwise>a.openDate</otherwise>
+    </choose>
+    </sql>
+
 	<select id="getGestureForumThreadWholeListCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
 		SELECT 
 		  COUNT(*)
@@ -43,8 +58,8 @@
 			ON a.threadCategory = d.cateNo
 		  LEFT JOIN GESTURE_THREAD_HEAD_LIKE AS e
 			ON a.threadNo = e.threadNo AND e.ccode = #{ccode}
-		ORDER BY isNotice DESC, ${orderTarget} DESC 
-		LIMIT ${pageTarget}, 20
+        ORDER BY isNotice DESC, <include refid="safeThreadOrder"/> DESC
+        LIMIT #{pageTarget}, 20
 	</select>
 	
 	<select id="getGestureForumThreadListSearchCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
@@ -63,7 +78,7 @@
 			  ON a.threadCategory = d.cateNo
 			LEFT JOIN GESTURE_THREAD_HEAD_LIKE AS e
 			  ON a.threadNo = e.threadNo AND e.ccode = #{ccode}
-		  WHERE a.threadTitle LIKE '%${searchKeyword}%' OR b.content LIKE '%${searchKeyword}%'
+          WHERE a.threadTitle LIKE CONCAT('%', #{searchKeyword}, '%') OR b.content LIKE CONCAT('%', #{searchKeyword}, '%')
 		  GROUP BY a.threadNo) AS a 
 	</select>
 	
@@ -94,10 +109,10 @@
 		  ON a.threadCategory = d.cateNo
 		  LEFT JOIN GESTURE_THREAD_HEAD_LIKE AS e
 		  ON a.threadNo = e.threadNo AND e.ccode = #{ccode}
-		WHERE a.threadTitle LIKE '%${searchKeyword}%' OR b.content LIKE '%${searchKeyword}%'
+        WHERE a.threadTitle LIKE CONCAT('%', #{searchKeyword}, '%') OR b.content LIKE CONCAT('%', #{searchKeyword}, '%')
 		GROUP BY a.threadNo
-		ORDER BY isNotice DESC, ${orderTarget} DESC 
-		LIMIT ${pageTarget}, 20
+        ORDER BY isNotice DESC, <include refid="safeThreadOrder"/> DESC
+        LIMIT #{pageTarget}, 20
 	</select>
 	
 	<select id="getForumThreadHeadData" parameterType="java.util.HashMap" resultType="GestureForumThreadHeaderModel">
@@ -123,11 +138,11 @@
 		  ON a.threadCategory = c.cateNo
 		  LEFT JOIN GESTURE_THREAD_HEAD_LIKE AS d
 		  ON a.threadNo = d.threadNo AND d.ccode = #{ccode}
-		WHERE a.threadNo = ${threadNo}
+        WHERE a.threadNo = #{threadNo}
 	</select>
 	
 	<update id="updateForumThreadCountingViewNum" parameterType="java.util.HashMap">
-		UPDATE GESTURE_THREAD_HEAD SET threadViews = threadViews + 1  WHERE threadNo = ${threadNo}
+        UPDATE GESTURE_THREAD_HEAD SET threadViews = threadViews + 1  WHERE threadNo = #{threadNo}
 	</update>
 	
 	<select id="getForumHeadThreadContent" parameterType="java.util.HashMap" resultType="GestureForumThreadHeadContentModel">
@@ -144,7 +159,7 @@
 		  INNER JOIN GESTURE_THREAD_POST AS b 
 		    ON a.threadNo = b.threadNo 
 		    AND b.isHeadPost 
-		WHERE a.threadNo = ${threadNo}
+        WHERE a.threadNo = #{threadNo}
 	</select>
 	
 	<select id="getGestureForumThreadPost" parameterType="java.util.HashMap" resultType="GestureForumThreadPostModel">
@@ -167,7 +182,7 @@
 		  ON a.writer = b.ccode
 		  LEFT JOIN GESTURE_THREAD_POST_LIKE AS c
 		  ON a.threadNo = c.threadNo AND a.postNo = c.postNo AND c.ccode = #{ccode}
-		WHERE a.threadNo = ${threadNo}
+        WHERE a.threadNo = #{threadNo}
 		ORDER BY postNo ASC
 	</select>
 	
@@ -176,11 +191,11 @@
 	</select>
 	
 	<insert id="insertForumThread" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="threadNo">
-		INSERT INTO GESTURE_THREAD_HEAD (threadTitle, threadOwner, threadCategory, isPrivate, isNotice) VALUES (#{threadTitle}, ${threadOwner}, ${threadCateNo}, ${threadIsPrivate}, ${threadIsNotice})
+        INSERT INTO GESTURE_THREAD_HEAD (threadTitle, threadOwner, threadCategory, isPrivate, isNotice) VALUES (#{threadTitle}, #{threadOwner}, #{threadCateNo}, #{threadIsPrivate}, #{threadIsNotice})
 	</insert>
 	
 	<insert id="insertForumThreadHeadPost" parameterType="java.util.HashMap">
-		INSERT INTO GESTURE_THREAD_POST (threadNo, content, writer, isHeadPost) VALUES (${threadNo}, #{threadContent}, ${threadOwner}, 1)
+        INSERT INTO GESTURE_THREAD_POST (threadNo, content, writer, isHeadPost) VALUES (#{threadNo}, #{threadContent}, #{threadOwner}, 1)
 	</insert>
 	
 	<delete id="deleteForumThread" parameterType="java.util.HashMap">
@@ -188,15 +203,15 @@
 	</delete>
 	
 	<insert id="insertForumThreadPost" parameterType="java.util.HashMap">
-		INSERT INTO GESTURE_THREAD_POST (threadNo, content, writer) VALUES (${threadNo}, #{postContent}, ${postWriter})
+        INSERT INTO GESTURE_THREAD_POST (threadNo, content, writer) VALUES (#{threadNo}, #{postContent}, #{postWriter})
 	</insert>
 	
 	<select id="getForumThreadPostContentOnly" parameterType="java.util.HashMap" resultType="java.lang.String">
-		SELECT content FROM GESTURE_THREAD_POST WHERE threadNo = ${threadNo} AND postNo = ${postNo} LIMIT 1
+        SELECT content FROM GESTURE_THREAD_POST WHERE threadNo = #{threadNo} AND postNo = #{postNo} LIMIT 1
 	</select>
 	
 	<select id="getForumThreadHeadPostContentOnly" parameterType="java.util.HashMap" resultType="java.lang.String">
-		SELECT content FROM GESTURE_THREAD_POST WHERE threadNo = ${threadNo}
+        SELECT content FROM GESTURE_THREAD_POST WHERE threadNo = #{threadNo}
 	</select>
 	
 	<update id="updateForumThread" parameterType="java.util.HashMap">
@@ -207,10 +222,10 @@
 		SET a.threadTitle = #{threadTitle},
 		  a.threadCategory = #{threadCateNo},
 		  b.content = #{threadContent},
-		  a.isPrivate = ${threadIsPrivate}
-		WHERE a.threadNo = ${threadNo}
+          a.isPrivate = #{threadIsPrivate}
+        WHERE a.threadNo = #{threadNo}
 		  AND (a.threadOwner = #{threadOwner} OR #{threadOwner} = 0)
-		  AND b.postNo = ${postNo}
+          AND b.postNo = #{postNo}
 		  AND b.isHeadPost
 	</update>
 	
@@ -220,8 +235,8 @@
 		SET
 		  content = #{postContent},
 		  editDate = NOW() 
-		WHERE threadNo = ${threadNo} 
-		  AND postNo = ${postNo} 
+        WHERE threadNo = #{threadNo}
+          AND postNo = #{postNo}
 		  AND (writer = #{postWriter} OR #{postWriter} = 0)
 		  AND !isHeadPost 
 	</update>
@@ -234,8 +249,8 @@
 		  LEFT JOIN GESTURE_THREAD_POST_LIKE AS b 
 		    ON a.threadNo = b.threadNo 
 		    AND a.postNo = b.postNo 
-		WHERE a.threadNo = ${threadNo}
-		  AND a.postNo = ${postNo}
+        WHERE a.threadNo = #{threadNo}
+          AND a.postNo = #{postNo}
 		  AND (a.writer = #{ccode} OR #{ccode} = 0)
 		  AND !a.isHeadPost
 	</delete>
@@ -251,7 +266,7 @@
 		    ON a.threadNo = c.threadNo 
 		  LEFT JOIN GESTURE_THREAD_POST_LIKE AS d 
 		    ON a.threadNo = d.threadNo 
-		WHERE a.threadNo = ${threadNo}
+        WHERE a.threadNo = #{threadNo}
 		  AND (a.threadOwner = #{threadOwner} OR #{threadOwner} = 0)
 	</delete>
 	

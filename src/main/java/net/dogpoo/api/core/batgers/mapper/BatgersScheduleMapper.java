@@ -16,7 +16,7 @@ public interface BatgersScheduleMapper {
 	@Select("SELECT idx, gamers, IFNULL(healers, '') AS healers FROM BATGERS_MATCH_PARENT ORDER BY idx DESC LIMIT 1")
 	public HashMap<String, Object> getCurrentGamers();
 	
-	@Select("SELECT idx, gamers, IFNULL(healers, '') AS healers FROM BATGERS_MATCH_PARENT WHERE idx = ${parentCd}")
+    @Select("SELECT idx, gamers, IFNULL(healers, '') AS healers FROM BATGERS_MATCH_PARENT WHERE idx = #{parentCd}")
 	public HashMap<String, Object> getGamers(@Param("parentCd") int parentCd);
 	
 	@Select("SELECT IFNULL(DATE_ADD(endDate, INTERVAL 30 MINUTE) <= NOW(), 0) AS isEnd FROM BATGERS_MATCH_PARENT ORDER BY idx DESC LIMIT 1")
@@ -29,10 +29,10 @@ public interface BatgersScheduleMapper {
 	@Select("SELECT COUNT(*) FROM BATGERS_MATCH_CHILD WHERE matchIdPUBG = #{matchId}")
 	public boolean checkDuplicateMatchId(@Param("matchId") String matchId);
 	
-	@Select("SELECT playerNo, playerNm, rating, innerRating, playerNmPUBG, playerIdPUBG FROM BATGERS_PLAYER_LIST WHERE playerNo = ${where}")
+    @Select("SELECT playerNo, playerNm, rating, innerRating, playerNmPUBG, playerIdPUBG FROM BATGERS_PLAYER_LIST WHERE playerNo = #{where}")
 	public List<HashMap<String, Object>> getCurrentMatchPlayer(@Param("where") String where);
 	
-	@Update("UPDATE BATGERS_PLAYER_LIST SET innerRating = ${mmr} WHERE playerNo = #{playerNo}")
+    @Update("UPDATE BATGERS_PLAYER_LIST SET innerRating = #{mmr} WHERE playerNo = #{playerNo}")
 	public int updatePlayerRating(@Param("mmr") double mmr, @Param("playerNo") int playerNo);
 	
 	public int insertMatchPUBGDetail(HashMap<String, Object> paramMap);
@@ -54,7 +54,7 @@ public interface BatgersScheduleMapper {
 	@Insert("INSERT INTO BATGERS_PLAYER_DAILY_SCORE(playerNo, ratingPUBG) SELECT playerNo, rating FROM BATGERS_PLAYER_LIST WHERE playerNo = #{playerNo}")
 	public int insertPlayerDailyMMR(@Param("playerNo") int playerNo);
 	
-	@Select("SELECT idx, playerId FROM BATGERS_MATCH_PUBG_DETAIL WHERE matchNo = ${matchNo}")
+    @Select("SELECT idx, playerId FROM BATGERS_MATCH_PUBG_DETAIL WHERE matchNo = #{matchNo}")
 	public List<HashMap<String, Object>> getPUBGPlayerIdList(@Param("matchNo") int matchNo);
 	
 }

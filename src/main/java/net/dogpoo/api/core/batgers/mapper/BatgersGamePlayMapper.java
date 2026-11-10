@@ -17,7 +17,7 @@ public interface BatgersGamePlayMapper {
 	@Select("SELECT idx, gamers, IFNULL(healers, '') AS healers, DATE_FORMAT(regDate, '%Y-%m-%d %T') AS regDate FROM BATGERS_MATCH_PARENT WHERE isLive LIMIT 1")
 	public HashMap<String, Object> getCurrentLiveGameParent();
 	
-	@Select("SELECT DATE_FORMAT(regDate, '%Y-%m-%d %T') AS regDate, DATE_FORMAT(endDate, '%Y-%m-%d %T') AS endDate FROM BATGERS_MATCH_PARENT WHERE idx = ${parentCd}")
+    @Select("SELECT DATE_FORMAT(regDate, '%Y-%m-%d %T') AS regDate, DATE_FORMAT(endDate, '%Y-%m-%d %T') AS endDate FROM BATGERS_MATCH_PARENT WHERE idx = #{parentCd}")
 	public HashMap<String, String> getMatchedTime(@Param("parentCd") String parentCd);
 	
 	public List<HashMap<String, Object>> getCurrentLiveGameList(@Param("parentCd") String parentCd);
@@ -26,7 +26,7 @@ public interface BatgersGamePlayMapper {
 	
 	public int insertMatchParent(HashMap<String, Object> paramMap);
 	
-	@Insert("INSERT INTO BATGERS_MATCH_PLAYER (parentCd, playerNo, isHealer) VALUES (${parentCd}, ${playerNo}, ${isHealer})")
+    @Insert("INSERT INTO BATGERS_MATCH_PLAYER (parentCd, playerNo, isHealer) VALUES (#{parentCd}, #{playerNo}, #{isHealer})")
 	public int insertMatchPlayer(HashMap<String, Object> paramMap);
 	
 	@Select("SELECT COUNT(*) FROM BATGERS_MATCH_PARENT WHERE isLive")
@@ -52,9 +52,9 @@ public interface BatgersGamePlayMapper {
 	@Delete("DELETE FROM BATGERS_MATCH_PUBG_DETAIL WHERE matchNo IN(SELECT matchNo FROM BATGERS_MATCH_CHILD WHERE parentCd = #{parentCd})")
 	public void deletePUBGMatchHistory(@Param("parentCd") String parentCd);
 	
-	@Delete("DELETE FROM BATGERS_MATCH_PUBG_DETAIL WHERE matchNo = ${matchNo}")
+    @Delete("DELETE FROM BATGERS_MATCH_PUBG_DETAIL WHERE matchNo = #{matchNo}")
 	public void deleteMatchPUBGDetail(@Param("matchNo") int matchNo);
 	
-	@Delete("DELETE FROM BATGERS_MATCH_CHILD WHERE matchNo = ${matchNo}")
+    @Delete("DELETE FROM BATGERS_MATCH_CHILD WHERE matchNo = #{matchNo}")
 	public void deleteEachMatchChild(@Param("matchNo") int matchNo);
 }

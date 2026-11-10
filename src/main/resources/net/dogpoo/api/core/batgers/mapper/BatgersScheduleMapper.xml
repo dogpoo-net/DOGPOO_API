@@ -33,7 +33,7 @@
 		  #{mmrDelta},
 		  #{loserFlag},
 		  #{winPlace},
-		  ROUND(${damageDealt}, 4),
+          ROUND(#{damageDealt}, 4),
 		  #{damagePenalty},
 		  #{kills},
 		  #{dbnos},
@@ -50,7 +50,7 @@
 		SET
 		  matchId = #{matchId},
 		  loserFlag = #{loserFlag},
-		  damageDealt = ROUND(${damageDealt}, 4),
+          damageDealt = ROUND(#{damageDealt}, 4),
 		  damagePenalty = #{damagePenalty},
 		  kills = #{kills},
 		  dbnos = #{dbnos},
@@ -59,7 +59,7 @@
 		  teamKills = #{teamKills},
 		  timeSurvived = #{timeSurvived},
 		  startDate = CONVERT_TZ(#{startDate}, '+00:00', '+09:00')
-		WHERE idx = ${idx}
+        WHERE idx = #{idx}
 	</update>
 	<select id="getNoProcessedMatchList" parameterType="java.lang.Integer" resultType="java.util.HashMap">
 		SELECT 
@@ -71,7 +71,7 @@
 		  INNER JOIN BATGERS_PLAYER_LIST AS b
 		  ON a.loser = b.playerNo
 		WHERE a.gameCd = 1 
-		  AND a.parentCd = ${parentCd}
+          AND a.parentCd = #{parentCd}
 		  AND a.matchIdPUBG IS NULL 
 	</select>
 	<select id="getReprocessMatch" parameterType="java.lang.Integer" resultType="java.util.HashMap">
@@ -84,7 +84,7 @@
 		  INNER JOIN BATGERS_PLAYER_LIST AS b
 		  ON a.loser = b.playerNo
 		WHERE a.gameCd = 1 
-		  AND a.parentCd = ${parentCd}
-		  AND a.matchNo = ${matchNo}
+          AND a.parentCd = #{parentCd}
+          AND a.matchNo = #{matchNo}
 	</select>
 </mapper>
