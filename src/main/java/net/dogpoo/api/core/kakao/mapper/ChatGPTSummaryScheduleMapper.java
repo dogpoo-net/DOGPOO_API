@@ -16,9 +16,6 @@ public interface ChatGPTSummaryScheduleMapper {
 	@Select("SELECT promptValue FROM DOGPOO_AI_SYSTEM_PROMPT WHERE promptNm = #{promptNm}")
 	public String getSystemPromptValue(@Param("promptNm") String promptNm);
 	
-	@Select("SELECT MAX(userSeq) FROM DOGPOO_AI_CHATBOT_HISTORY WHERE GROUP BY userId")
-	public int getLastChatSeq();
-	
     @Select("SELECT COUNT(*) FROM DOGPOO_AI_CHATBOT_SUMMARY WHERE userId = #{userId} AND mode = #{mode} AND endSeq = #{lastSeq};")
 	public boolean isExistSummary(@Param("userId") String userId, @Param("mode") String mode, @Param("lastSeq") int lastSeq);
 	

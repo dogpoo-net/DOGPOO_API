@@ -44,18 +44,16 @@ This is a routing inventory, not proof of full behavioral equivalence.
 
 ## Validation and remaining work
 
-Validated on JDK 25: Maven package, 2 passing automated compatibility tests,
-application startup with scheduling disabled, live HTTP GET /dogpoo/api/checkGet
-and POST /dogpoo/api/checkPost (200 and original Korean JSON messages), and invalid
-JWT on a protected URL (401). Smoke checks use an unreachable local DB and do not
-claim DB functionality. Original dev/local DB hosts could not be resolved from the
-cloud machine; live TCP connection was refused. Configure network access to a test
-DB before validating all database-backed routes, authentication and scheduled jobs.
+VPN database validation is now complete for the scope documented in
+[database-validation.md](docs/database-validation.md): 177 server-side SQL preparation
+checks, actual reads, temporary-table CRUD, authentication and original JWT key
+compatibility passed. Four opt-in DB tests and eleven DB-independent tests passed.
+Database connection failure described during initial migration has been resolved.
 
-Remaining legacy risks requiring dedicated compatibility tests: broad anonymous URL patterns,
-third-party callbacks and integrations, ownership/authorization checks, legacy
-JJWT 0.9.1 (retained with JAXB for existing token compatibility), and business logic
-validation. This migration is not a completed security audit or production sign-off.
+All 72 mapping annotations remain covered by the inventory test. Full business
+flows and external integrations are not all tested; this is not production sign-off.
+Remaining risks include broad anonymous URL patterns, object ownership checks,
+third-party callbacks and the legacy JWT library.
 
 ## Mapper SQL hardening
 
@@ -70,7 +68,7 @@ its original offset and `page + 8` count, computed by MyBatis before binding.
 Five mapper security tests load the actual XML/annotation statements without a
 DB and check parameterization, ordering, counter rejection, pagination arithmetic
 and absence of raw substitution in mapper sources. Together with the two existing
-compatibility tests, seven tests pass. Live MariaDB execution remains unverified;
+compatibility tests, seven tests pass. Live MariaDB validation is documented above;
 this change addresses SQL injection, not object ownership or endpoint access policy.
 
 ## Internal modernization and compatibility boundary
@@ -88,8 +86,8 @@ legacy empty fallbacks and Jackson numeric types remain unchanged.
 Eleven tests pass in `mvn verify`, including real embedded-server HTTP requests,
 all 72 mapping annotations compared with the original inventory, mapper security,
 JSON compatibility and a local HTTP server exercising headers/UTF-8/error bodies.
-These are not 72 end-to-end feature tests. Real database-backed and third-party
-operations have not been verified because the original database is unreachable.
+These are not 72 end-to-end feature tests. Representative database-backed operations are now verified as documented above;
+third-party integrations and full business workflows still need controlled fixtures.
 
 Mutable MyBatis models and public HashMap request/response contracts are retained.
 Converting them wholesale to records or changing global error responses would

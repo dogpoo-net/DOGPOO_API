@@ -18,9 +18,6 @@ public interface TutorWelcomeBlockMapper {
 	@Update("UPDATE DOGPOO_AI_CHATBOT_USER SET gender = #{gender} WHERE userId = #{userId} AND mode = #{mode}")
 	public int updateUserGender(@Param("userId") String userId, @Param("mode") String mode, @Param("gender") String gender);
 	
-	@Update("UPDATE DOGPOO_AI_CHATBOT_USER SET userLv = #{userLv} WHERE userId = #{userId} AND mode = #{mode}")
-	public int updateUserLevel(@Param("userId") String userId, @Param("mode") String mode, @Param("userLv") String userLv);
-	
 	@Update("UPDATE DOGPOO_AI_CHATBOT_USER SET userNm = #{userNm} WHERE userId = #{userId} AND mode = #{mode}")
 	public int updateUserName(@Param("userId") String userId, @Param("mode") String mode, @Param("userNm") String userNm);
 	
