@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.dogpoo.api.core.gesture.mapper.GestureForumUserMapper">
+	<select id="getGestureUserInfoByUuid" parameterType="java.lang.String" resultType="UserModel">
+		SELECT 
+		  ccode,
+		  userId,
+		  passwd,
+		  userNm,
+		  userUuid,
+		  userType 
+		FROM
+		  GESTURE_FORUM_USER 
+		WHERE userUuid = #{userUuid}
+	</select>
+	<select id="getGestureUserInfoByUserId" parameterType="java.lang.String" resultType="UserModel">
+		SELECT 
+		  ccode,
+		  userId,
+		  passwd,
+		  userNm,
+		  userUuid,
+		  userType 
+		FROM
+		  GESTURE_FORUM_USER 
+		WHERE userId = #{userId}
+	</select>
+	<insert id="insertSignUpUser" parameterType="UserModel">
+	  INSERT INTO GESTURE_FORUM_USER (
+	    userId,
+	    passwd,
+	    userNm,
+	    userUuid,
+	    userWaitCd,
+	    countryCd,
+	    picture,
+	    userType,
+	    socialType,
+	    snsSignId
+	  )
+	  VALUES
+	    (
+	    #{userId},
+	    #{passwd},
+	    #{userNm},
+	    #{userUuid},
+	    #{userWaitCd},
+	    #{countryCd},
+	    #{picture},
+	    #{userType},
+	    #{socialType},
+	    #{snsSignId}
+	    )
+	</insert>
+	<select id="duplicateCheckUserId" parameterType="java.lang.String" resultType="java.lang.Integer">
+		SELECT 
+		  CASE
+		    WHEN COUNT(*) = 0 THEN 0 
+		    WHEN COUNT(*) > 0 AND userType != 'WITHDRAW' THEN 1 
+		    WHEN COUNT(*) > 0 AND userType = 'WITHDRAW' THEN 2 
+		  END AS cnt 
+		FROM
+		  GESTURE_FORUM_USER 
+		WHERE userId = #{userId}
+	</select>
+	<delete id="deleteUserLikeHist" parameterType="java.util.HashMap">
+		DELETE 
+		  b, c 
+		FROM
+		  GESTURE_FORUM_USER AS a 
+		  LEFT JOIN GESTURE_THREAD_HEAD_LIKE AS b 
+		    ON a.ccode = b.ccode 
+		  LEFT JOIN GESTURE_THREAD_POST_LIKE AS c 
+		    ON a.ccode = c.ccode 
+		WHERE a.ccode = #{ccode}
+		  AND a.userId = #{username}
+	</delete>
+	<update id="withdrawal" parameterType="java.util.HashMap">
+		UPDATE 
+		  GESTURE_FORUM_USER 
+		SET
+		  <![CDATA[passwd = '<WITHDRAWAL>',
+		  userNm = '<WITHDRAWAL>',]]>
+		  userType = 'WITHDRAW',
+		  useYn = 0,
+		  outDate = NOW() 
+		WHERE ccode = #{ccode}
+		  AND userId = #{username}
+	</update>
+</mapper>

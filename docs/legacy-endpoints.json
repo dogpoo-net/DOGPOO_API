@@ -1,0 +1,176 @@
+[
+  {
+    "controller": "net/dogpoo/api/core/watchhome/controller/WatchHomeTestController.java",
+    "mappings": [
+      "@RequestMapping(\"/api/watchhome\")",
+      "@RequestMapping(value = \"/getServerNo\", method = RequestMethod.GET)",
+      "@RequestMapping(value = \"/getServerAddr\", method = RequestMethod.GET)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/user/controller/UserController.java",
+    "mappings": [
+      "@RequestMapping(\"/user/common\")",
+      "@RequestMapping(value = \"/authMyPage\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getMailTest\", method = RequestMethod.GET, produces = JSON_UTF8)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/gesture/controller/GestureForumUserController.java",
+    "mappings": [
+      "@RequestMapping(\"/gesture/forum/user\")",
+      "@RequestMapping(value = \"/checkToken\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getGoogleOauthUserInfo\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/signUp\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/signUpComplete\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/updateMyPage\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/withdrawal\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/initPassSendMail\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/initPassCodeAuth\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/initPassword\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getCountryCd\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/authLogin\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/authUuid\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/countVisitor\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getVisitorCount\", method = RequestMethod.GET)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/gesture/controller/GestureForumThreadPostController.java",
+    "mappings": [
+      "@RequestMapping(\"/gesture/forum/thread\")",
+      "@RequestMapping(value=\"/getForumThreadPostWholeList\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/getGestureForumThreadListSearch\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/updateForumThreadCountingViewNum\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/getForumThreadHeadData\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/getForumThreadPostContent\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/getForumHeadThreadContent\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/getForumThreadCategoryList\", method=RequestMethod.POST)",
+      "@RequestMapping(value=\"/insertForumThread\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/insertForumThreadPost\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/insertForumThreadPostLike\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/updateForumThread\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/updateForumThreadPost\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/deleteForumThreadPost\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/toggleForumThreadLike\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/removeForumThreadWholeData\", method=RequestMethod.POST, produces = JSON_UTF8)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/gesture/controller/GestureForumThreadPostCommentController.java",
+    "mappings": [
+      "@RequestMapping(\"/gesture/forum/thread/post/comment\")",
+      "@RequestMapping(value=\"/insertForumThreadPostComment\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/updateForumThreadPostComment\", method=RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value=\"/getForumThreadPostCommentList\", method=RequestMethod.POST)",
+      "@RequestMapping(value=\"/deleteForumThreadPostComment\", method=RequestMethod.POST, produces = JSON_UTF8)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/telegram/controller/TelegramBotBuildDataController.java",
+    "mappings": [
+      "@RequestMapping(\"/msg/telegram\")",
+      "@RequestMapping(value = \"/sendPersonalTelegramMessage\", method=RequestMethod.POST)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/kakao/controller/KakaoChatbotEnglishController.java",
+    "mappings": [
+      "@RequestMapping(\"/kakao/chatbot/english\")",
+      "@RequestMapping(value = \"/getEngTeacherAnswer\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getWelcomeOutput\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/removeWholeMemory\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getTestNode\", method = RequestMethod.POST, produces = JSON_UTF8)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/kakao/controller/TutorWelcomeBlockController.java",
+    "mappings": [
+      "@RequestMapping(\"/kakao/chatbot/welcome\")",
+      "@RequestMapping(value = \"/setUserGender\", method = RequestMethod.POST, produces = JSON_UTF8)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/convatar/controller/ConvatarHomeController.java",
+    "mappings": [
+      "@RequestMapping(\"/convatar/api/home\")",
+      "@RequestMapping(value = \"/getConvatarReleaseNotesList\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getNoticeModelList\", method = RequestMethod.POST, produces = JSON_UTF8)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/convatar/controller/ConvatarCurrencyController.java",
+    "mappings": [
+      "@RequestMapping(\"/convatar/api/currency\")",
+      "@RequestMapping(value = \"/getCountryList\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getEachCountryCurrencyVolume\", method = RequestMethod.POST, produces = JSON_UTF8)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/test/controller/DogpooConnectionTestController.java",
+    "mappings": [
+      "@RequestMapping(\"/api\")",
+      "@RequestMapping(value = \"/checkPost\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/checkGet\", method = RequestMethod.GET)",
+      "@RequestMapping(value = \"/postJsonTest\", method = RequestMethod.POST, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/homepage/controller/DogpooHomePublicAPIController.java",
+    "mappings": [
+      "@RequestMapping(\"/api/homepage\")",
+      "@RequestMapping(value = \"/contact/insertContactMessage\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/business/getCrewMembers\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/business/getOurWorks\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/business/getBizData\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/business/getDonationLink\", method = RequestMethod.GET)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/homepage/controller/DogpooHomeAdminUserController.java",
+    "mappings": [
+      "@RequestMapping(\"/api/home/admin/user\")",
+      "@RequestMapping(value = \"/authLogin\", method = RequestMethod.POST, produces = JSON_UTF8)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/batgers/controller/BatgersGameHistoryController.java",
+    "mappings": [
+      "@RequestMapping(\"/batgers/api/history\")",
+      "@RequestMapping(value = \"/getApplyPlayerMMRScore\", method = RequestMethod.POST)",
+      "@RequestMapping(value = \"/getGameHistoryList\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getGameHistoryDetailList\", method = RequestMethod.POST, produces = JSON_UTF8)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/batgers/controller/BatgersGamePlayController.java",
+    "mappings": [
+      "@RequestMapping(\"/batgers/api/gameplay\")",
+      "@RequestMapping(value = \"/getPlayerList\", method = RequestMethod.POST)",
+      "@RequestMapping(value = \"/insertMatchParent\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getMatchStatus\", method = RequestMethod.POST)",
+      "@RequestMapping(value = \"/insertMatchChild\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/finishMatch\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/deleteMatchParent\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/deleteMatchChild\", method = RequestMethod.POST, produces = JSON_UTF8)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/batgers/controller/BatgersStatisticsController.java",
+    "mappings": [
+      "@RequestMapping(\"/batgers/api/statistics\")",
+      "@RequestMapping(value = \"/getGamerTotalStatisticsResult\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getGamerSumDefeatCnt\", method = RequestMethod.POST)",
+      "@RequestMapping(value = \"/getDailyMMRScoreList\", method = RequestMethod.POST)"
+    ]
+  },
+  {
+    "controller": "net/dogpoo/api/core/batgers/controller/BatgersGameListController.java",
+    "mappings": [
+      "@RequestMapping(\"/batgers/api/gamelist\")",
+      "@RequestMapping(value = \"/regGameList\", method = RequestMethod.POST, produces = JSON_UTF8)",
+      "@RequestMapping(value = \"/getGameList\", method = RequestMethod.POST)",
+      "@RequestMapping(value = \"/removeGameList\", method = RequestMethod.POST, produces = JSON_UTF8)"
+    ]
+  }
+]

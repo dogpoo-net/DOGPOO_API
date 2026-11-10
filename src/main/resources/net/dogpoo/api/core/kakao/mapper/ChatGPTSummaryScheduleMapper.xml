@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.dogpoo.api.core.kakao.mapper.ChatGPTSummaryScheduleMapper">
+	<select id="getNextSummarySeq" parameterType="java.lang.String" resultType="java.lang.Integer">
+		SELECT 
+		  IF(COUNT(*), MAX(summarySeq) + 1, 1) AS summarySeq 
+		FROM
+		  DOGPOO_AI_CHATBOT_SUMMARY
+		WHERE userId = #{userId} AND mode = #{mode}
+	</select>
+	<insert id="insertChatbotSummaryContent" useGeneratedKeys="true" keyProperty="idx" parameterType="KakaoChatbotSummaryModel">
+		INSERT INTO DOGPOO_AI_CHATBOT_SUMMARY (mode, summarySeq, endSeq, userId, content) 
+		VALUES
+		  (#{mode}, #{summarySeq}, #{endSeq}, #{userId}, #{content})
+	</insert>
+	<select id="getSummaryTargetList" parameterType="java.lang.Integer" resultType="java.util.HashMap">
+		SELECT 
+		  userId,
+		  mode,
+		  CAST(CAST(
+		      TRUNCATE(MAX(chatSeq) / ${summarySize}, 0) AS UNSIGNED
+		    ) * ${summarySize} AS VARCHAR (10)
+		  ) AS lastSeq 
+		FROM
+		  DOGPOO_AI_CHATBOT_HISTORY 
+		GROUP BY userId, mode
+		HAVING CAST(
+		    TRUNCATE(MAX(chatSeq) / ${summarySize}, 0) AS UNSIGNED
+		  ) * ${summarySize} > 0 
+	</select>
+	<insert id="insertLongtermContent" useGeneratedKeys="true" keyProperty="idx" parameterType="KakaoChatbotSummaryModel">
+		INSERT INTO DOGPOO_AI_CHATBOT_LONGTERM (mode, endSeq, userId, content) 
+		VALUES
+		  (#{mode}, #{endSeq}, #{userId}, #{content})
+	</insert>
+	<select id="getLongtermTargetList" parameterType="java.lang.Integer" resultType="java.util.HashMap">
+		SELECT 
+		  userId,
+		  mode,
+		  CAST(CAST(
+		      TRUNCATE(MAX(summarySeq) / ${longtermSize}, 0) AS UNSIGNED
+		    ) * ${longtermSize} AS VARCHAR (10)
+		  ) AS lastSeq 
+		FROM
+		  DOGPOO_AI_CHATBOT_SUMMARY
+		GROUP BY userId, mode
+		HAVING CAST(
+		    TRUNCATE(MAX(summarySeq) / ${longtermSize}, 0) AS UNSIGNED
+		  ) * ${longtermSize} > 0 ;
+	</select>
+</mapper>
+

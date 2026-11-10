@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.dogpoo.api.core.batgers.mapper.BatgersScheduleMapper">
+	<insert id="insertMatchPUBGDetail" parameterType="java.util.HashMap">
+		INSERT INTO BATGERS_MATCH_PUBG_DETAIL (
+		  matchNo,
+		  matchId,
+		  playerNo,
+		  playerNm,
+		  playerId,
+		  mmr,
+		  mmrDelta,
+		  loserFlag,
+		  winPlace,
+		  damageDealt,
+		  damagePenalty,
+		  kills,
+		  dbnos,
+		  assists,
+		  revives,
+		  teamKills,
+		  timeSurvived,
+		  startDate
+		) 
+		VALUES
+		  (
+		  #{matchNo},
+		  #{matchId},
+		  #{playerNo},
+		  #{playerNm},
+		  #{playerId},
+		  #{mmr},
+		  #{mmrDelta},
+		  #{loserFlag},
+		  #{winPlace},
+		  ROUND(${damageDealt}, 4),
+		  #{damagePenalty},
+		  #{kills},
+		  #{dbnos},
+		  #{assists},
+		  #{revives},
+		  #{teamKills},
+		  #{timeSurvived},
+		  CONVERT_TZ(#{startDate}, '+00:00', '+09:00')
+		  )
+	</insert>
+	<update id="updateMatchPUBGDetail" parameterType="java.util.HashMap">
+		UPDATE 
+		  BATGERS_MATCH_PUBG_DETAIL 
+		SET
+		  matchId = #{matchId},
+		  loserFlag = #{loserFlag},
+		  damageDealt = ROUND(${damageDealt}, 4),
+		  damagePenalty = #{damagePenalty},
+		  kills = #{kills},
+		  dbnos = #{dbnos},
+		  assists = #{assists},
+		  revives = #{revives},
+		  teamKills = #{teamKills},
+		  timeSurvived = #{timeSurvived},
+		  startDate = CONVERT_TZ(#{startDate}, '+00:00', '+09:00')
+		WHERE idx = ${idx}
+	</update>
+	<select id="getNoProcessedMatchList" parameterType="java.lang.Integer" resultType="java.util.HashMap">
+		SELECT 
+		  a.matchNo,
+		  DATE_FORMAT(a.regDate, '%Y-%m-%d %T') AS regDate,
+		  b.playerIdPUBG
+		FROM
+		  BATGERS_MATCH_CHILD AS a
+		  INNER JOIN BATGERS_PLAYER_LIST AS b
+		  ON a.loser = b.playerNo
+		WHERE a.gameCd = 1 
+		  AND a.parentCd = ${parentCd}
+		  AND a.matchIdPUBG IS NULL 
+	</select>
+	<select id="getReprocessMatch" parameterType="java.lang.Integer" resultType="java.util.HashMap">
+		SELECT 
+		  a.matchNo,
+		  DATE_FORMAT(a.regDate, '%Y-%m-%d %T') AS regDate,
+		  b.playerIdPUBG
+		FROM
+		  BATGERS_MATCH_CHILD AS a
+		  INNER JOIN BATGERS_PLAYER_LIST AS b
+		  ON a.loser = b.playerNo
+		WHERE a.gameCd = 1 
+		  AND a.parentCd = ${parentCd}
+		  AND a.matchNo = ${matchNo}
+	</select>
+</mapper>

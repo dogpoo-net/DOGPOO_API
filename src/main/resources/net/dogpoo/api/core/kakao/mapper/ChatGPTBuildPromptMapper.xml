@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.dogpoo.api.core.kakao.mapper.ChatGPTBuildPromptMapper">
+	<select id="getSystemMainPrompt" parameterType="java.lang.String" resultType="java.lang.String">
+		SELECT 
+		  REPLACE(
+			REPLACE(promptValue, '??????', b.userNm)
+		  , '######', b.tutorNm
+		  ) AS prompt
+		FROM
+		  DOGPOO_AI_SYSTEM_PROMPT AS a
+		  INNER JOIN DOGPOO_AI_CHATBOT_USER AS b
+		  ON b.userId = #{userId} AND a.mode = b.mode
+		WHERE a.mode = #{mode}
+		  AND a.promptNm = #{promptNm}
+		  AND a.useYn 
+		LIMIT 1 
+	</select>
+	<select id="getChatHistoryList" parameterType="java.lang.String" resultType="KakaoChatbotConversationModel">
+		SELECT 
+		  idx,
+		  input,
+		  output 
+		FROM
+		  (SELECT 
+		    idx, input, output 
+		  FROM
+		    DOGPOO_AI_CHATBOT_HISTORY 
+		  WHERE userId = #{userId} AND mode = #{mode}
+		    AND LENGTH(input) > 0 
+		    AND LENGTH(output) > 0 
+		  ORDER BY idx DESC 
+		  LIMIT ${memoryLimit}) AS a 
+		ORDER BY idx
+	</select>
+	<select id="getChatbotSummaryContentList" parameterType="java.lang.String" resultType="java.lang.String">
+		SELECT 
+		  GROUP_CONCAT(CONCAT(number, '. ', content) SEPARATOR '\n') AS content
+		FROM
+		  (SELECT 
+		    row_number() over ( ORDER BY idx ) AS number, content, endSeq
+		  FROM
+		    DOGPOO_AI_CHATBOT_SUMMARY 
+		  WHERE userId = #{userId} AND mode = #{mode}
+		  ORDER BY endSeq 
+		  LIMIT ${summaryLimit}) AS a 
+	</select>
+	<select id="getChatSummaryTargetList" parameterType="java.lang.String" resultType="KakaoChatbotConversationModel">
+		SELECT 
+		  idx,
+		  chatSeq,
+		  input,
+		  output 
+		FROM
+		  DOGPOO_AI_CHATBOT_HISTORY 
+		WHERE userId = #{userId} AND mode = #{mode}
+		  AND LENGTH(output) > 0 
+		  AND (
+		    chatSeq > ${startSeq} 
+		    <![CDATA[AND chatSeq <= ${lastSeq}]]>
+		  )
+	</select>
+	<select id="getLongtermTargetSummaryList" parameterType="java.lang.String" resultType="java.lang.String">
+		SELECT 
+		  CONCAT(
+		    IFNULL((SELECT CONCAT('0. ', content, '\n') FROM DOGPOO_AI_CHATBOT_LONGTERM WHERE userId = #{userId} AND mode = #{mode} ORDER BY idx DESC LIMIT 1), ''),
+		    GROUP_CONCAT(CONCAT(number, '. ', content) SEPARATOR '\n')
+		  ) AS content
+		FROM
+		  (SELECT row_number() over ( ORDER BY idx ) AS number, content FROM DOGPOO_AI_CHATBOT_SUMMARY
+		  WHERE userId = #{userId}
+		  AND mode = #{mode}
+		  AND (
+		    summarySeq > ${startSeq}
+		    <![CDATA[AND summarySeq <= ${lastSeq}]]>
+		  )
+		) AS a
+	</select>
+</mapper>

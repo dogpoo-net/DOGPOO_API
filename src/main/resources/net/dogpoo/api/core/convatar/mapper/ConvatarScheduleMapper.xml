@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.dogpoo.api.core.convatar.mapper.ConvatarScheduleMapper">
+	<insert id="insertCurrencyCountryList" parameterType="java.util.HashMap">
+		INSERT INTO CURRENCY_COUNTRY_MAP (
+		  countryKey,
+		  currencyCd,
+		  countryNmEN,
+		  currencyNmEN,
+		  isUse
+		) VALUES (
+		  #{countryCd},
+		  #{currencyCd},
+		  #{countryNm},
+		  #{currencyNm},
+		  1
+		)
+		ON DUPLICATE KEY UPDATE 
+		  isUse = 1
+	</insert>
+	<insert id="insertCurrencyVolumeData" parameterType="java.util.HashMap">
+		INSERT INTO CURRENCY_VOLUME_MAP (
+		  countryKey,
+		  relativeCountryKey,
+		  afterRatio,
+		  today
+		) VALUES (
+  		  #{countryKey},
+		  #{relativeCountryKey},
+		  #{afterRatio},
+		  #{today}
+		)
+		ON DUPLICATE KEY UPDATE 
+		  afterRatio = #{afterRatio},
+		  today = #{today}
+	</insert>
+</mapper>

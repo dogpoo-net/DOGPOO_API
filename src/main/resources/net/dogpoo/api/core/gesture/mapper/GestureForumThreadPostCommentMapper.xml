@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.dogpoo.api.core.gesture.mapper.GestureForumThreadPostCommentMapper">
+	<insert id="insertForumThreadPostComment" parameterType="java.util.HashMap">
+		INSERT INTO GESTURE_THREAD_POST_COMMENT (postNo, threadNo, comment, commentWriter)
+		VALUES (${postNo}, ${threadNo}, #{comment}, #{commentWriter})
+	</insert>
+	<update id="updateForumThreadPostComment" parameterType="java.util.HashMap">
+		UPDATE GESTURE_THREAD_POST_COMMENT SET comment = #{comment}, modDate = NOW()
+		WHERE commentNo = ${commentNo}
+		  AND (commentWriter = #{commentWriter} OR #{commentWriter} = 0)
+	</update>
+	<select id="getForumThreadPostCommentList" parameterType="java.util.HashMap" resultType="GestureForumThreadPostCommentModel">
+		SELECT 
+		  a.threadNo,
+		  a.postNo,
+		  a.commentNo,
+		  <![CDATA[REPLACE(a.comment, '\n', '<br/>') AS comment,]]>
+		  a.commentWriter,
+		  <![CDATA[IFNULL(b.userNm, '<UNKNOWN>') AS commentWriterNm,]]>
+		  DATE_FORMAT(a.regDate, '%Y-%m-%d %T') AS commentRegDate,
+		  FN_GET_BEFORE_TIME_SIMPLE(IFNULL(a.modDate, a.regDate), #{countryCd}) AS commentAgoTime,
+		  IF(IFNULL(modDate, FALSE) = FALSE, FALSE, TRUE) commentIsUpdate
+		FROM
+		  GESTURE_THREAD_POST_COMMENT AS a
+		  LEFT JOIN GESTURE_FORUM_USER AS b
+		  ON a.commentWriter = b.ccode
+		WHERE threadNo = ${threadNo}
+		  AND postNo = ${postNo}
+		  AND isRemove = 0
+		  ORDER BY commentNo ASC
+	</select>
+	<delete id="deleteForumThreadPostComment" parameterType="java.util.HashMap">
+		UPDATE GESTURE_THREAD_POST_COMMENT SET isRemove = 1, rmDate = NOW()
+		WHERE threadNo = ${threadNo}
+		  AND postNo = ${postNo}
+		  AND commentNo = ${commentNo}
+		  AND (commentWriter = #{commentWriter} OR #{commentWriter} = 0)
+<!-- 		DELETE FROM GESTURE_THREAD_POST_COMMENT -->
+<!-- 		WHERE threadNo = ${threadNo} -->
+<!-- 		  AND postNo = ${postNo} -->
+<!-- 		  AND commentNo = ${commentNo} -->
+<!-- 		  AND (commentWriter = #{commentWriter} OR #{commentWriter} = 0) -->
+	</delete>
+</mapper>

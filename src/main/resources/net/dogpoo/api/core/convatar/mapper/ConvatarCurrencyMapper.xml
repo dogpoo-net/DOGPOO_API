@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.dogpoo.api.core.convatar.mapper.ConvatarCurrencyMapper">
+	<select id="getEachCountryCurrencyVolume" parameterType="java.util.HashMap" resultType="ConvatarCurrencyVolumeModel">
+		SELECT 
+		  a.countryKey,
+		  b.relativeCountryKey,
+		  b.afterRatio,
+		  b.today,
+		  ROUND(1 / b.afterRatio, 8) AS curCurrency,
+		  b.afterRatio - b.beforeRatio AS compareYesterday
+		FROM
+		  CURRENCY_COUNTRY_MAP AS a 
+		  INNER JOIN CURRENCY_VOLUME_MAP AS b
+		  ON a.countryKey = b.countryKey
+		WHERE a.countryKey = #{originCountryKey} AND b.relativeCountryKey = #{relativeCountryKey};
+	</select>
+</mapper>

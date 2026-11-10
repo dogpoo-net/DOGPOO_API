@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.dogpoo.api.core.batgers.mapper.BatgersGamePlayMapper">
+	<insert id="insertMatchParent" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="parentCd">
+		INSERT INTO BATGERS_MATCH_PARENT(gamers, healers, isLive, bet) VALUES (#{gamers}, #{healers}, true, ${bet})
+	</insert>
+	<insert id="insertMatchChild" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="matchNo">
+		INSERT INTO BATGERS_MATCH_CHILD (parentCd, gameCd, loser) VALUES (#{parentCd}, #{gameCd}, #{loser})
+	</insert>
+	<select id="getCurrentLiveGameList" parameterType="java.lang.String" resultType="java.util.HashMap">
+		SELECT 
+		  a.matchNo,
+		  a.gameCd,
+		  b.gameNm,
+		  a.loser,
+		  c.playerNm AS loserNm,
+		  DATE_FORMAT(a.regDate, '%Y-%m-%d %T') AS regDate 
+		FROM
+		  BATGERS_MATCH_CHILD AS a 
+		  INNER JOIN BATGERS_GAME_LIST AS b 
+		    ON a.gameCd = b.idx 
+		  INNER JOIN BATGERS_PLAYER_LIST AS c 
+		    ON a.loser = c.playerNo 
+		WHERE parentCd = #{parentCd}
+		ORDER BY a.matchNo 
+	</select>
+	<select id="getPUBGStatsList" parameterType="java.lang.String" resultType="java.util.HashMap">
+		SELECT 
+		  c.playerNo,
+		  d.playerNm,
+		  IF(INSTR(a.healers, c.playerNo) > 0, 1, 0) AS isHealer,
+		  c.matchNo,
+		  c.playerNm AS gamerNm,
+		  c.mmr,
+		  c.mmrDelta,
+		  c.loserFlag,
+		  c.winPlace,
+		  c.damageDealt,
+		  (0 - c.damagePenalty) AS damagePenalty,
+		  c.kills,
+		  c.dbnos,
+		  c.assists,
+		  c.revives,
+		  c.teamKills,
+		  c.timeSurvived
+		FROM
+		  BATGERS_MATCH_PARENT AS a 
+		  INNER JOIN BATGERS_MATCH_CHILD AS b 
+		    ON a.idx = b.parentCd 
+		  INNER JOIN BATGERS_MATCH_PUBG_DETAIL AS c
+		    ON b.matchNo = c.matchNo
+		  INNER JOIN BATGERS_PLAYER_LIST AS d
+		    ON c.playerNo = d.playerNo
+		WHERE a.idx = #{parentCd}
+		ORDER BY c.idx
+	</select>
+</mapper>

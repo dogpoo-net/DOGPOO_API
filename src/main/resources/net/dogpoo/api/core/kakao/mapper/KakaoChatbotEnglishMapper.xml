@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.dogpoo.api.core.kakao.mapper.KakaoChatbotEnglishMapper">
+	<insert id="insertChatbotConversationHistory" useGeneratedKeys="true" keyProperty="idx" parameterType="KakaoChatbotConversationModel">
+		INSERT INTO DOGPOO_AI_CHATBOT_HISTORY (userId, mode, chatSeq, input) VALUES (#{userId}, #{mode}, #{chatSeq}, #{input})
+	</insert>
+	<insert id="insertChatbotWholeConversation" useGeneratedKeys="true" keyProperty="idx" parameterType="KakaoChatbotConversationModel">
+		INSERT INTO DOGPOO_AI_CHATBOT_HISTORY (userId, mode, chatSeq, input, output) VALUES (#{userId}, #{mode}, #{chatSeq}, #{input}, #{output})
+	</insert>
+	<select id="getNextUserSeq" parameterType="java.lang.String" resultType="java.lang.Integer">
+		SELECT 
+		  IF(COUNT(*), MAX(chatSeq) + 1, 1) AS chatSeq 
+		FROM
+		  DOGPOO_AI_CHATBOT_HISTORY 
+		WHERE userId = #{userId} AND mode = #{mode}
+	</select>
+</mapper>
+

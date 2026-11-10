@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.dogpoo.api.core.batgers.mapper.BatgersStatisticsMapper">
+	<select id="getGamerSumDefeatCnt" resultType="java.util.HashMap">
+		SELECT 
+		  a.playerNo,
+		  a.playerNm,
+		  COUNT(loser)
+		FROM
+		  BATGERS_PLAYER_LIST AS a 
+		  LEFT JOIN BATGERS_MATCH_CHILD AS b 
+		    ON a.playerNo = b.loser 
+		GROUP BY loser
+		HAVING COUNT(loser) >= 0
+		ORDER BY playerNo
+	</select>
+	<select id="getGamerTotalStatisticsResult" resultType="java.util.HashMap">
+		SELECT 
+		  pl.playerNo,
+		  pl.playerNm,
+		  COALESCE(s.matchCnt, 0) AS matchCnt,
+		  COALESCE(s.gameCnt, 0) AS gameCnt,
+		  COALESCE(s.defeatCnt, 0) AS defeatCnt,
+		  COALESCE(s.absoluteDefeatCnt, 0) AS absoluteDefeatCnt,
+		  COALESCE(s.fee, 0) AS fee,
+		  ROUND(pl.rating) AS rating,
+		  ROUND(GREATEST(0, pl.rating - 1050) / 2) AS penalty
+		FROM
+		  BATGERS_PLAYER_LIST pl 
+		  LEFT JOIN 
+		    (SELECT 
+		      s.playerNo,
+		      COUNT(DISTINCT s.parentCd) AS matchCnt,
+		      SUM(s.gameCnt) AS gameCnt,
+		      SUM(GREATEST(0, s.absoluteDefeatCnt - x.minDefeatCnt)) AS defeatCnt,
+		      SUM(s.absoluteDefeatCnt) AS absoluteDefeatCnt,
+		      SUM(s.bet * (x.totalDefeatCnt - x.playerCnt * s.absoluteDefeatCnt)) AS fee 
+		    FROM
+		      (SELECT 
+		        parentCd,
+		        playerNo,
+		        MAX(bet) AS bet,
+		        COUNT(*) AS gameCnt,
+		        SUM(absoluteDefeatCnt) AS absoluteDefeatCnt 
+		      FROM
+		        VW_MATCH_PLAYER_GAME_STAT
+		        WHERE 1 = 1
+		        <choose>
+		  			<when test="gameCd != null and gameCd == 'PUBG'">
+		  				AND gameCd = 1
+		  			</when>
+		  			<when test="gameCd != null and gameCd == 'ETC'">
+		  				AND gameCd != 1
+		  			</when>
+		  		</choose>
+		        <choose>
+		  			<when test="dateRange != null and dateRange > 0">
+		  				AND regDate >= DATE_SUB(NOW(), INTERVAL ${dateRange} MONTH)
+		  			</when>
+		  		</choose>
+		      GROUP BY parentCd, playerNo) s 
+		      INNER JOIN 
+		        (SELECT 
+		          parentCd,
+		          MIN(absoluteDefeatCnt) AS minDefeatCnt,
+		          SUM(absoluteDefeatCnt) AS totalDefeatCnt,
+		          COUNT(*) AS playerCnt 
+		        FROM
+		          (SELECT 
+		            parentCd,
+		            playerNo,
+		            SUM(absoluteDefeatCnt) AS absoluteDefeatCnt 
+		          FROM
+		            VW_MATCH_PLAYER_GAME_STAT
+		            WHERE 1 = 1
+			        <choose>
+			  			<when test="gameCd != null and gameCd == 'PUBG'">
+			  				AND gameCd = 1
+			  			</when>
+			  			<when test="gameCd != null and gameCd == 'ETC'">
+			  				AND gameCd != 1
+			  			</when>
+			  		</choose>
+				  	<choose>
+			  			<when test="dateRange != null and dateRange > 0">
+			  				AND regDate >= DATE_SUB(NOW(), INTERVAL ${dateRange} MONTH)
+			  			</when>
+			  		</choose>
+		          GROUP BY parentCd, playerNo) a 
+		        GROUP BY parentCd) x
+		        ON x.parentCd = s.parentCd 
+		    GROUP BY s.playerNo) s 
+		    ON s.playerNo = pl.playerNo
+	</select>
+			<!-- SELECT 
+		  pl.playerNo,
+		  pl.playerNm,
+		  COUNT(DISTINCT parentCd) AS matchCnt,
+		  SUM(a.gameCnt) AS gameCnt,
+		  SUM(a.defeatCnt) AS defeatCnt,
+		  SUM(a.absoluteDefeatCnt) AS absoluteDefeatCnt,
+		  SUM(a.fee) AS fee,
+		  ROUND(pl.rating) AS rating,
+		  ROUND(GREATEST(0, pl.rating - 1050) / 2) AS penalty
+		FROM VW_MATCH_PLAYER_RESULT AS a 
+		  INNER JOIN BATGERS_PLAYER_LIST AS pl 
+		    ON pl.playerNo = a.playerNo 
+		GROUP BY a.playerNo, pl.playerNm 
+		ORDER BY pl.playerNo -->
+</mapper>
