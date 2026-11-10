@@ -8,7 +8,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -18,8 +17,13 @@ import net.dogpoo.api.core.kakao.model.KakaoChatbotConversationModel;
 
 @Service
 public class CallbackAsyncConnectUtilService {
+
+    public CallbackAsyncConnectUtilService(KakaoChatbotEnglishMapper mapper) {
+        this.mapper = mapper;
+    }
+
 	
-	@Autowired KakaoChatbotEnglishMapper mapper;
+	private final KakaoChatbotEnglishMapper mapper;
 	private final static String TOKEN = System.getenv("CHATGPT_API_KEY");
 	private final static Logger LOG = LoggerFactory.getLogger(CallbackAsyncConnectUtilService.class);
 	

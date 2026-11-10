@@ -5,7 +5,6 @@ import java.util.HashMap;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,8 +17,13 @@ import net.dogpoo.api.core.test.service.DogpooConnectionTestService;
 @RestController
 @RequestMapping("/api")
 public class DogpooConnectionTestController {
+
+    public DogpooConnectionTestController(DogpooConnectionTestService service) {
+        this.service = service;
+    }
+
 	
-	@Autowired DogpooConnectionTestService service;
+	private final DogpooConnectionTestService service;
 	private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 	
 	@RequestMapping(value = "/checkPost", method = RequestMethod.POST, produces = JSON_UTF8)

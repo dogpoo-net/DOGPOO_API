@@ -3,7 +3,6 @@ package net.dogpoo.api.core.kakao.service;
 import java.util.HashMap;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -15,9 +14,17 @@ import net.dogpoo.api.core.kakao.service.util.ModelParseUtil;
 
 @Service
 public class ChatGPTSummaryScheduleService {
+
+    public ChatGPTSummaryScheduleService(
+            ChatGPTSummaryScheduleMapper mapper,
+            ChatGPTBuildPromptUtilComponent promptUtil) {
+        this.mapper = mapper;
+        this.promptUtil = promptUtil;
+    }
+
 	
-	@Autowired ChatGPTSummaryScheduleMapper mapper;
-	@Autowired ChatGPTBuildPromptUtilComponent promptUtil;
+	private final ChatGPTSummaryScheduleMapper mapper;
+	private final ChatGPTBuildPromptUtilComponent promptUtil;
 	private static String serverType = System.getProperty("serverType");
 	private final static String GPT_SUMMARY_TARGET_SIZE = "GPT_SUMMARY_TARGET_SIZE";
 	private final static String GPT_LONGTERM_TARGET_SIZE = "GPT_LONGTERM_TARGET_SIZE";

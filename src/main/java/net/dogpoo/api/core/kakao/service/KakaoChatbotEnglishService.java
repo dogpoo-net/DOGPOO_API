@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.kakao.mapper.KakaoChatbotEnglishMapper;
@@ -18,11 +17,23 @@ import net.dogpoo.api.core.kakao.service.util.ModelParseUtil;
 
 @Service
 public class KakaoChatbotEnglishService {
+
+    public KakaoChatbotEnglishService(
+            KakaoChatbotEnglishMapper mapper,
+            ChatGPTBuildPromptUtilComponent promptUtil,
+            CallbackAsyncConnectUtilService callbackService,
+            TutorWelcomeBlockComponent welcome) {
+        this.mapper = mapper;
+        this.promptUtil = promptUtil;
+        this.callbackService = callbackService;
+        this.welcome = welcome;
+    }
+
 	
-	@Autowired KakaoChatbotEnglishMapper mapper;
-	@Autowired ChatGPTBuildPromptUtilComponent promptUtil;
-	@Autowired CallbackAsyncConnectUtilService callbackService;
-	@Autowired TutorWelcomeBlockComponent welcome;
+	private final KakaoChatbotEnglishMapper mapper;
+	private final ChatGPTBuildPromptUtilComponent promptUtil;
+	private final CallbackAsyncConnectUtilService callbackService;
+	private final TutorWelcomeBlockComponent welcome;
 	
 	private final static Logger LOG = LoggerFactory.getLogger(KakaoChatbotEnglishService.class);
 	private final static int CALLBACK_TIMEOUT_MS = 20000;

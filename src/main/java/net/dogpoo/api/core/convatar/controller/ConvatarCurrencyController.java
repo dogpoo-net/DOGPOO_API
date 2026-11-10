@@ -2,7 +2,6 @@ package net.dogpoo.api.core.convatar.controller;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -13,8 +12,13 @@ import net.dogpoo.api.core.convatar.service.ConvatarCurrencyService;
 @RestController
 @RequestMapping("/convatar/api/currency")
 public class ConvatarCurrencyController {
+
+    public ConvatarCurrencyController(ConvatarCurrencyService service) {
+        this.service = service;
+    }
+
 	
-	@Autowired ConvatarCurrencyService service;
+	private final ConvatarCurrencyService service;
 	
 	private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 	

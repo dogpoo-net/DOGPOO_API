@@ -4,7 +4,6 @@ import java.util.HashMap;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -16,7 +15,11 @@ import net.dogpoo.api.core.kakao.service.KakaoChatbotEnglishService;
 @RequestMapping("/kakao/chatbot/english")
 public class KakaoChatbotEnglishController {
 
-	@Autowired KakaoChatbotEnglishService service;
+    public KakaoChatbotEnglishController(KakaoChatbotEnglishService service) {
+        this.service = service;
+    }
+
+	private final KakaoChatbotEnglishService service;
 	
 	private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 	private static final String FIXED_TOKEN = System.getenv("KAKAO_WEBHOOK_TOKEN");

@@ -2,7 +2,6 @@ package net.dogpoo.api.core.gesture.controller;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,12 +17,20 @@ import net.dogpoo.api.core.gesture.service.GestureForumThreadPostCommentService;
 @Controller
 @RequestMapping("/gesture/forum/thread/post/comment")
 public class GestureForumThreadPostCommentController {
+
+    public GestureForumThreadPostCommentController(
+            GestureForumThreadPostCommentService service,
+            JwtTokenUtil jwtTokenUtil) {
+        this.service = service;
+        this.jwtTokenUtil = jwtTokenUtil;
+    }
+
 	
 	private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 	private static final String AUTHORIZATION = "Authorization";
 	
-	@Autowired GestureForumThreadPostCommentService service;
-	@Autowired JwtTokenUtil jwtTokenUtil;
+	private final GestureForumThreadPostCommentService service;
+	private final JwtTokenUtil jwtTokenUtil;
 	
 	@RequestMapping(value="/insertForumThreadPostComment", method=RequestMethod.POST, produces = JSON_UTF8)
 	@ResponseBody

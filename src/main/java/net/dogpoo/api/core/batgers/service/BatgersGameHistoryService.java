@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.batgers.mapper.BatgersGameHistoryMapper;
@@ -14,10 +13,20 @@ import net.dogpoo.api.core.batgers.model.BatgersGameHistoryListModel;
 
 @Service
 public class BatgersGameHistoryService {
+
+    public BatgersGameHistoryService(
+            BatgersGameHistoryMapper mapper,
+            BatgersGamePlayMapper matchMapper,
+            BatgersDataComponent component) {
+        this.mapper = mapper;
+        this.matchMapper = matchMapper;
+        this.component = component;
+    }
+
 	
-	@Autowired BatgersGameHistoryMapper mapper;
-	@Autowired BatgersGamePlayMapper matchMapper;
-	@Autowired BatgersDataComponent component;
+	private final BatgersGameHistoryMapper mapper;
+	private final BatgersGamePlayMapper matchMapper;
+	private final BatgersDataComponent component;
 	
 	public HashMap<String, Object> getApplyPlayerMMRScore() {
 		

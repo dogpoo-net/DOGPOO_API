@@ -7,7 +7,6 @@ import java.util.List;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -17,8 +16,13 @@ import net.dogpoo.api.core.convatar.mapper.ConvatarScheduleMapper;
 
 @Service
 public class ConvatarScheduleService {
+
+    public ConvatarScheduleService(ConvatarScheduleMapper mapper) {
+        this.mapper = mapper;
+    }
+
 	
-	@Autowired ConvatarScheduleMapper mapper;
+	private final ConvatarScheduleMapper mapper;
 
 	private static String serverType = System.getProperty("serverType");
 	final static String EXIM_API_AUTH_KEY = System.getenv("EXIM_API_KEY");

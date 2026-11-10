@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,8 +18,13 @@ import net.dogpoo.api.core.telegram.service.TelegramBotTransportMessageService;
 @Controller
 @RequestMapping("/msg/telegram")
 public class TelegramBotBuildDataController {
+
+    public TelegramBotBuildDataController(TelegramBotTransportMessageService service) {
+        this.service = service;
+    }
+
 	
-	@Autowired TelegramBotTransportMessageService service;
+	private final TelegramBotTransportMessageService service;
 	
 	@RequestMapping(value = "/sendPersonalTelegramMessage", method=RequestMethod.POST)
 	@ResponseBody

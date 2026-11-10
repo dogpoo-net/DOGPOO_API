@@ -2,7 +2,6 @@ package net.dogpoo.api.core.gesture.service;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.gesture.mapper.GestureForumThreadPostCommentMapper;
@@ -10,7 +9,11 @@ import net.dogpoo.api.core.gesture.mapper.GestureForumThreadPostCommentMapper;
 @Service
 public class GestureForumThreadPostCommentService {
 
-	@Autowired GestureForumThreadPostCommentMapper mapper;
+    public GestureForumThreadPostCommentService(GestureForumThreadPostCommentMapper mapper) {
+        this.mapper = mapper;
+    }
+
+	private final GestureForumThreadPostCommentMapper mapper;
 	
 	public HashMap<String, Object> insertForumThreadPostComment(String userKey, HashMap<String, Object> paramMap) {
 		paramMap.put("commentWriter", userKey);

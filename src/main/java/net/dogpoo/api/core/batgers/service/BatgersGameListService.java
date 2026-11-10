@@ -2,7 +2,6 @@ package net.dogpoo.api.core.batgers.service;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.batgers.mapper.BatgersGameListMapper;
@@ -10,7 +9,11 @@ import net.dogpoo.api.core.batgers.mapper.BatgersGameListMapper;
 @Service
 public class BatgersGameListService {
 
-	@Autowired BatgersGameListMapper mapper;
+    public BatgersGameListService(BatgersGameListMapper mapper) {
+        this.mapper = mapper;
+    }
+
+	private final BatgersGameListMapper mapper;
 	
 	public HashMap<String, Object> regGameList(HashMap<String, Object> paramMap) {
 		HashMap<String, Object> resMap = new HashMap<String, Object>();

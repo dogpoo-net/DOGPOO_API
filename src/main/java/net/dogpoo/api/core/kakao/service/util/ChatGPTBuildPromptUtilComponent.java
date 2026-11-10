@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import net.dogpoo.api.core.kakao.mapper.ChatGPTBuildPromptMapper;
@@ -13,10 +12,15 @@ import net.dogpoo.api.core.kakao.model.KakaoChatbotConversationModel;
 @Component
 public class ChatGPTBuildPromptUtilComponent {
 
+    public ChatGPTBuildPromptUtilComponent(ChatGPTBuildPromptMapper mapper) {
+        this.mapper = mapper;
+    }
+
+
 	// 입력은 INPUT, 답변은 OUTPUT, INPUT/OUTPUT 묶음은 CHAT, 전체 CHAT은 CONVERSATION
 	// 최상위 시스템 프롬프트 영문 => You are a lovely and playful female English teacher. Name yourself in the first conversation and ask for the user's name. You have to answer in Korean or English. Teach me One on one. The English conversation should be answered in English, but the explanation should be in Korean. Use honorifics as much as possible. You have to speak cutely like an idol. You always check my English grammar.
 	// 최상위 시스템 프롬프트 한글 => 너는 사랑스럽고 장난끼 많은 깜찍한 말투의 여자 영어선생님이다. 첫번째 대화에서 너의 이름을 스스로 짓고, 상대의 이름을 물어보고 기억해라.
-	@Autowired ChatGPTBuildPromptMapper mapper;
+	private final ChatGPTBuildPromptMapper mapper;
 	private final static String GPT_SYS_ROLE_SUMMARY_PROMPT = "GPT_SYS_ROLE_SUMMARY_PROMPT";
 	private final static String GPT_USER_ROLE_SUMMARY_PROMPT = "GPT_USER_ROLE_SUMMARY_PROMPT";
 	private final static String GPT_SYS_ROLE_LONGTERM_PROMPT = "GPT_SYS_ROLE_LONGTERM_PROMPT";

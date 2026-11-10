@@ -2,7 +2,6 @@ package net.dogpoo.api.core.convatar.service;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.convatar.mapper.ConvatarHomeMapper;
@@ -10,7 +9,11 @@ import net.dogpoo.api.core.convatar.mapper.ConvatarHomeMapper;
 @Service
 public class ConvatarHomeService {
 
-	@Autowired ConvatarHomeMapper mapper;
+    public ConvatarHomeService(ConvatarHomeMapper mapper) {
+        this.mapper = mapper;
+    }
+
+	private final ConvatarHomeMapper mapper;
 	
 	public HashMap<String, Object> getConvatarReleaseNotesList() {
 		HashMap<String, Object> resMap = new HashMap<String, Object>();

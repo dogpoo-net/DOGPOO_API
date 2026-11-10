@@ -2,7 +2,6 @@ package net.dogpoo.api.core.convatar.service;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.convatar.mapper.ConvatarCurrencyMapper;
@@ -11,7 +10,11 @@ import net.dogpoo.api.core.convatar.model.ConvatarCurrencyVolumeModel;
 @Service
 public class ConvatarCurrencyService {
 
-	@Autowired ConvatarCurrencyMapper mapper;
+    public ConvatarCurrencyService(ConvatarCurrencyMapper mapper) {
+        this.mapper = mapper;
+    }
+
+	private final ConvatarCurrencyMapper mapper;
 	
 	public HashMap<String, Object> getCountryList() {
 		HashMap<String, Object> resMap = new HashMap<String, Object>();

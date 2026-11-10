@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.gesture.mapper.GestureForumThreadPostMapper;
@@ -14,12 +13,20 @@ import net.dogpoo.api.core.telegram.service.TelegramBotTransportMessageService;
 @Service
 public class GestureForumThreadPostService {
 
+    public GestureForumThreadPostService(
+            GestureForumThreadPostMapper mapper,
+            TelegramBotTransportMessageService telegram) {
+        this.mapper = mapper;
+        this.telegram = telegram;
+    }
+
+
 	final static String IMAGE_SPLIT_DELIMITER = "<img src=\"http://image.dongnyang.com";
 	final static String CONTENT_TYPE_JSON = "application/json;charset=utf-8";
 	final static byte THREAD_PAGE_SIZE = 20;
 	
-	@Autowired GestureForumThreadPostMapper mapper;
-	@Autowired TelegramBotTransportMessageService telegram;
+	private final GestureForumThreadPostMapper mapper;
+	private final TelegramBotTransportMessageService telegram;
 	
 	/**
 	 * 스레드 리스트 조회

@@ -3,15 +3,19 @@ package net.dogpoo.api.core.batgers.service;
 import java.util.HashMap;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.batgers.mapper.BatgersStatisticsMapper;
 
 @Service
 public class BatgersStatisticsService {
+
+    public BatgersStatisticsService(BatgersStatisticsMapper mapper) {
+        this.mapper = mapper;
+    }
+
 	
-	@Autowired BatgersStatisticsMapper mapper;
+	private final BatgersStatisticsMapper mapper;
 	
 	public HashMap<String, Object> getGamerTotalStatisticsResult(HashMap<String, Object> paramMap) {
 		HashMap<String, Object> resMap = new HashMap<String, Object>();

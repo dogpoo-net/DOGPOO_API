@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.json.simple.parser.ParseException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -16,10 +15,15 @@ import net.dogpoo.api.core.batgers.model.BatgersPlayerMMRModel;
 
 @Service
 public class BatgersScheduleService {
+
+    public BatgersScheduleService(BatgersScheduleMapper mapper) {
+        this.mapper = mapper;
+    }
+
 	
 	private static final int MMR_CORR = 1050;
 	private static String serverType = System.getProperty("serverType");
-	@Autowired BatgersScheduleMapper mapper;
+	private final BatgersScheduleMapper mapper;
 
 	@Scheduled(cron = "0 0 10 * * *")
 	public void updatePlayerMMRScorePUBG() {

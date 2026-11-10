@@ -4,7 +4,6 @@ import java.util.HashMap;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,8 +15,13 @@ import net.dogpoo.api.core.watchhome.service.WatchHomeTestService;
 @RestController
 @RequestMapping("/api/watchhome")
 public class WatchHomeTestController {
+
+    public WatchHomeTestController(WatchHomeTestService service) {
+        this.service = service;
+    }
+
 	
-	@Autowired WatchHomeTestService service;
+	private final WatchHomeTestService service;
 	
 //	private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 //	private static final String FIXED_TOKEN = System.getenv("KAKAO_WEBHOOK_TOKEN");

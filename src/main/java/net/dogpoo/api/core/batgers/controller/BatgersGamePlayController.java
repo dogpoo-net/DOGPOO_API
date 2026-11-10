@@ -2,7 +2,6 @@ package net.dogpoo.api.core.batgers.controller;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -13,10 +12,15 @@ import net.dogpoo.api.core.batgers.service.BatgersGamePlayService;
 @RestController
 @RequestMapping("/batgers/api/gameplay")
 public class BatgersGamePlayController {
+
+    public BatgersGamePlayController(BatgersGamePlayService service) {
+        this.service = service;
+    }
+
 	
 	private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 	
-	@Autowired BatgersGamePlayService service;
+	private final BatgersGamePlayService service;
 	
 	@RequestMapping(value = "/getPlayerList", method = RequestMethod.POST)
 	public HashMap<String, Object> getPlayerList() {

@@ -3,7 +3,6 @@ package net.dogpoo.api.core.gesture.controller;
 import java.io.IOException;
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,12 +15,20 @@ import net.dogpoo.api.core.gesture.service.GestureForumThreadPostService;
 @RestController
 @RequestMapping("/gesture/forum/thread")
 public class GestureForumThreadPostController {
+
+    public GestureForumThreadPostController(
+            GestureForumThreadPostService service,
+            JwtTokenUtil jwtTokenUtil) {
+        this.service = service;
+        this.jwtTokenUtil = jwtTokenUtil;
+    }
+
 	
 	private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 	private static final String AUTHORIZATION = "Authorization";
 	
-	@Autowired GestureForumThreadPostService service;
-	@Autowired JwtTokenUtil jwtTokenUtil;
+	private final GestureForumThreadPostService service;
+	private final JwtTokenUtil jwtTokenUtil;
 	
 	@RequestMapping(value="/getForumThreadPostWholeList", method=RequestMethod.POST, produces = JSON_UTF8)
 	public HashMap<String, Object> getForumThreadPostWholeList(@RequestBody HashMap<String, Object> paramMap) {

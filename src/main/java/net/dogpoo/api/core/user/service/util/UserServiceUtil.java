@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import net.dogpoo.api.common.util.MailSendUtil;
@@ -12,8 +11,13 @@ import net.dogpoo.api.core.user.mapper.UserMapper;
 
 @Component
 public class UserServiceUtil {
+
+    public UserServiceUtil(UserMapper mapper) {
+        this.mapper = mapper;
+    }
+
 	
-	@Autowired UserMapper mapper;
+	private final UserMapper mapper;
 	
 	public boolean sendInitPassMail(String userId, String initPassCode) {
 		HashMap<String, String> mailBodyMap = mapper.getMailPreset("INIT_PASS_CONFIRM_EN");

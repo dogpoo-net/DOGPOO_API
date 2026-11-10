@@ -72,3 +72,29 @@ DB and check parameterization, ordering, counter rejection, pagination arithmeti
 and absence of raw substitution in mapper sources. Together with the two existing
 compatibility tests, seven tests pass. Live MariaDB execution remains unverified;
 this change addresses SQL injection, not object ownership or endpoint access policy.
+
+## Internal modernization and compatibility boundary
+
+42 controller/service/filter classes now receive immutable dependencies through
+constructors. This makes their dependencies explicit and permits isolated tests.
+The authentication-manager lazy boundary is retained to break the legacy dependency
+cycle; a full Boot application test checks that the production bean graph starts.
+HTTP helper duplication is consolidated with try-with-resources. Response bodies
+(including non-2xx bodies), empty-string I/O failure results and ChatGPT TIMEOUT
+sentinels are retained. The previously ignored POST header argument is now applied.
+JSON mapper instances are reused, and parsing failures no longer print payloads;
+legacy empty fallbacks and Jackson numeric types remain unchanged.
+
+Eleven tests pass in `mvn verify`, including real embedded-server HTTP requests,
+all 72 mapping annotations compared with the original inventory, mapper security,
+JSON compatibility and a local HTTP server exercising headers/UTF-8/error bodies.
+These are not 72 end-to-end feature tests. Real database-backed and third-party
+operations have not been verified because the original database is unreachable.
+
+Mutable MyBatis models and public HashMap request/response contracts are retained.
+Converting them wholesale to records or changing global error responses would
+require broader characterization tests to prevent client-visible changes. Legacy
+JWT key formatting is not strict Base64, so replacing JJWT without first checking
+real existing tokens is deferred. Full modernization and production equivalence
+are not claimed; remaining work includes JWT/key migration, integration adapters,
+service ownership checks and per-endpoint database-backed contract tests.

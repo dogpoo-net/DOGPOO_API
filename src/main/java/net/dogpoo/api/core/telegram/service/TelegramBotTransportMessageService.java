@@ -15,15 +15,19 @@ import org.slf4j.LoggerFactory;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.telegram.mapper.TelegramBotTransportMessageMapper;
 
 @Service
 public class TelegramBotTransportMessageService {
+
+    public TelegramBotTransportMessageService(TelegramBotTransportMessageMapper mapper) {
+        this.mapper = mapper;
+    }
+
 	
-	@Autowired TelegramBotTransportMessageMapper mapper;
+	private final TelegramBotTransportMessageMapper mapper;
 	private final static Logger LOGGER = LoggerFactory.getLogger(TelegramBotTransportMessageService.class);
 	private final static String HOST = "https://api.telegram.org/bot";
 	private final static String PATH = System.getenv("TELEGRAM_BOT_PATH");

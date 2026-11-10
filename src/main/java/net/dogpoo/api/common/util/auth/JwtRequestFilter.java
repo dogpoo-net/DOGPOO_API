@@ -5,7 +5,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,14 +19,18 @@ import net.dogpoo.api.core.user.service.UserService;
 @Component
 public class JwtRequestFilter extends OncePerRequestFilter {
 
+    public JwtRequestFilter(UserService jwtUserDetailsService, JwtTokenUtil jwtTokenUtil) {
+        this.jwtUserDetailsService = jwtUserDetailsService;
+        this.jwtTokenUtil = jwtTokenUtil;
+    }
+
+
 	private static final String AUTHORIZATION = "Authorization";
 	private static final String TARGET = "target";
 	private static final String BEARER = "Bearer ";
 
-	@Autowired
-	private UserService jwtUserDetailsService;
-	@Autowired
-	private JwtTokenUtil jwtTokenUtil;
+	private final UserService jwtUserDetailsService;
+	private final JwtTokenUtil jwtTokenUtil;
 
 	//토큰인증(WebSecurityConfig 에서 사용)
 	@Override

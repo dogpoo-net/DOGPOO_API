@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.common.util.MailSendUtil;
@@ -14,8 +13,13 @@ import net.dogpoo.api.core.homepage.model.DogpooHomeContactMessageModel;
 
 @Service
 public class DogpooHomePublicAPIService {
+
+    public DogpooHomePublicAPIService(DogpooHomePublicAPIMapper mapper) {
+        this.mapper = mapper;
+    }
+
 	
-	@Autowired DogpooHomePublicAPIMapper mapper;
+	private final DogpooHomePublicAPIMapper mapper;
 
 	public HashMap<String, Object> insertContactMessage(HashMap<String, Object> paramMap) {
 		HashMap<String, Object> resMap = getValidateContactMap(paramMap);

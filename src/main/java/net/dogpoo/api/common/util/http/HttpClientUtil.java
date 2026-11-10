@@ -25,128 +25,43 @@ public final class HttpClientUtil {
 	
 	private final static Logger LOG = LoggerFactory.getLogger(HttpClientUtil.class);
 	
-	public static String get(String uri) {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		HttpGet httpGet = new HttpGet(uri);
-		
-		CloseableHttpResponse response = null;
-		String responseBody = "";
-		try {
-			response = httpClient.execute(httpGet);
-			responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			if(response != null) {
-				try {
-					response.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		try {
-			httpClient.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return responseBody;
-	}
-	
-	public static String get(String uri, HashMap<String, String> headerMap) {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		HttpGet httpGet = new HttpGet(uri);
-		
-		for(Entry<String, String> headerEntry : headerMap.entrySet()) {
-			httpGet.addHeader(headerEntry.getKey(), headerEntry.getValue());
-		}
-		
-		CloseableHttpResponse response = null;
-		String responseBody = "";
-		try {
-			response = httpClient.execute(httpGet);
-			responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			if(response != null) {
-				try {
-					response.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		try {
-			httpClient.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return responseBody;
-	}
-	
-	public static String post(String uri, HashMap<String, Object> paramMap) {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		
-		HttpPost httpPost = new HttpPost(uri);
-		httpPost.setHeader("Content-Type", "application/json");
-		httpPost.setEntity(new StringEntity(new Gson().toJson(paramMap), "UTF-8"));
-		
-		CloseableHttpResponse response = null;
-		String responseBody = "";
-		try {
-			response = httpClient.execute(httpPost);
-			responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			if(response != null) {
-				try {
-					response.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		try {
-			httpClient.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return responseBody;
-	}
-	
-	public static String post(String uri, HashMap<String, Object> paramMap, HashMap<String, String> headerMap) {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		
-		HttpPost httpPost = new HttpPost(uri);
-		httpPost.setHeader("Content-Type", "application/json");
-		httpPost.setEntity(new StringEntity(new Gson().toJson(paramMap), "UTF-8"));
-		
-		CloseableHttpResponse response = null;
-		String responseBody = "";
-		try {
-			response = httpClient.execute(httpPost);
-			responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			if(response != null) {
-				try {
-					response.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		try {
-			httpClient.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return responseBody;
-	}
-	
+    private static final Gson JSON = new Gson();
+
+    private HttpClientUtil() {}
+
+    public static String get(String uri) {
+        return get(uri, new HashMap<>());
+    }
+
+    public static String get(String uri, HashMap<String, String> headers) {
+        var request = new HttpGet(uri);
+        headers.forEach(request::setHeader);
+        return execute(request);
+    }
+
+    public static String post(String uri, HashMap<String, Object> body) {
+        return post(uri, body, new HashMap<>());
+    }
+
+    public static String post(String uri, HashMap<String, Object> body, HashMap<String, String> headers) {
+        var request = new HttpPost(uri);
+        request.setHeader("Content-Type", "application/json");
+        headers.forEach(request::setHeader);
+        request.setEntity(new StringEntity(JSON.toJson(body), java.nio.charset.StandardCharsets.UTF_8));
+        return execute(request);
+    }
+
+    private static String execute(org.apache.http.client.methods.HttpUriRequest request) {
+        // Retain legacy response-body/error conventions, including non-2xx bodies.
+        try (var client = HttpClients.createDefault(); var response = client.execute(request)) {
+            return response.getEntity() == null ? "" : EntityUtils.toString(response.getEntity(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException | RuntimeException failure) {
+            // URLs, headers and response bodies may contain credentials or private data.
+            LOG.warn("Outbound HTTP request failed: {}", failure.getClass().getSimpleName());
+            return "";
+        }
+    }
+
 	public static String requestChatGPTSessionPost(CloseableHttpClient httpClient, String uri, String token, HashMap<String, Object> paramMap) {
 		HttpPost httpPost = new HttpPost(uri);
 		httpPost.setHeader("Content-Type", "application/json");
@@ -155,31 +70,17 @@ public final class HttpClientUtil {
 		String jsonParam = new Gson().toJson(paramMap);
 		httpPost.setEntity(new StringEntity(jsonParam, "UTF-8"));
 		
-		CloseableHttpResponse response = null;
-		String responseBody = "";
-		try {
-			response = httpClient.execute(httpPost);
-			responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
-		} catch (ConnectTimeoutException e) {
-			LOG.error("CHAT_GPT_API_CONNECTION_TIMEOUT_EXCEPTION");
-			e.printStackTrace();
-			responseBody = "TIMEOUT";
-		} catch (SocketTimeoutException e) {
-			LOG.error("OPEN_AI_API_SOCKET_TIMEOUT_EXCEPTION");
-//			e.printStackTrace();
-			responseBody = "TIMEOUT";
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if(response != null) response.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		return responseBody;
-	}
-	
+        try (var response = httpClient.execute(httpPost)) {
+            return response.getEntity() == null ? "" : EntityUtils.toString(response.getEntity(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (ConnectTimeoutException | SocketTimeoutException timeout) {
+            LOG.warn("Chat API request timed out");
+            return "TIMEOUT";
+        } catch (IOException failure) {
+            LOG.warn("Chat API request failed: {}", failure.getClass().getSimpleName());
+            return "";
+        }
+    }
+
 	private static String getCookieStream(CloseableHttpResponse response) {
 		String cookies = Arrays.stream(response.getHeaders("Set-Cookie"))
                 .map(h -> h.getValue().split(";", 2)[0]) // "key=value" 부분만 추출

@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.junit.jupiter.api.Assertions.*;
 class CompatibilityTest {
  @Test void legacyConnectionEndpoints() throws Exception {
-  var mvc=MockMvcBuilders.standaloneSetup(new DogpooConnectionTestController()).build();
+  var mvc=MockMvcBuilders.standaloneSetup(new DogpooConnectionTestController(null)).build();
   mvc.perform(get("/api/checkGet")).andExpect(status().isOk()).andExpect(jsonPath("$.result").value("겟 통신 정상"));
   mvc.perform(post("/api/checkPost").contentType("application/json").content("{}")).andExpect(status().isOk()).andExpect(jsonPath("$.result").value("포스트 통신 정상"));
  }

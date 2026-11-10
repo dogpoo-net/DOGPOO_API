@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,12 +26,27 @@ import net.dogpoo.api.core.user.service.util.UserServiceUtil;
 @Service
 public class GestureForumUserService {
 
-	@Autowired GestureForumUserMapper mapper;
-	@Autowired AuthenticationManager authenticationManager;
-	@Autowired PasswordEncoder bcryptEncoder;
-	@Autowired UserServiceUtil userServiceUtil;
-	@Autowired UserService userService;
-	@Autowired JwtTokenUtil jwtTokenUtil;
+    public GestureForumUserService(
+            GestureForumUserMapper mapper,
+            AuthenticationManager authenticationManager,
+            PasswordEncoder bcryptEncoder,
+            UserServiceUtil userServiceUtil,
+            UserService userService,
+            JwtTokenUtil jwtTokenUtil) {
+        this.mapper = mapper;
+        this.authenticationManager = authenticationManager;
+        this.bcryptEncoder = bcryptEncoder;
+        this.userServiceUtil = userServiceUtil;
+        this.userService = userService;
+        this.jwtTokenUtil = jwtTokenUtil;
+    }
+
+	private final GestureForumUserMapper mapper;
+	private final AuthenticationManager authenticationManager;
+	private final PasswordEncoder bcryptEncoder;
+	private final UserServiceUtil userServiceUtil;
+	private final UserService userService;
+	private final JwtTokenUtil jwtTokenUtil;
 	
 	private final static Logger logger = LoggerFactory.getLogger(GestureForumUserService.class);
 

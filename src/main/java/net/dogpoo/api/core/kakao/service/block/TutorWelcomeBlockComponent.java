@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import net.dogpoo.api.core.kakao.mapper.TutorWelcomeBlockMapper;
@@ -17,8 +16,15 @@ import net.dogpoo.api.core.kakao.service.util.ModelParseUtil;
 @Component
 public class TutorWelcomeBlockComponent {
 
-	@Autowired TutorWelcomeBlockMapper mapper;
-	@Autowired ChatGPTBuildPromptUtilComponent promptUtil;
+    public TutorWelcomeBlockComponent(
+            TutorWelcomeBlockMapper mapper,
+            ChatGPTBuildPromptUtilComponent promptUtil) {
+        this.mapper = mapper;
+        this.promptUtil = promptUtil;
+    }
+
+	private final TutorWelcomeBlockMapper mapper;
+	private final ChatGPTBuildPromptUtilComponent promptUtil;
 	
 	private final static Logger LOG = LoggerFactory.getLogger(TutorWelcomeBlockComponent.class);
 	private final static int DEFAULT_TIMEOUT_MS = 4200;

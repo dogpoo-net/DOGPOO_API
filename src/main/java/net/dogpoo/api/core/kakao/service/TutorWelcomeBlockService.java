@@ -2,7 +2,6 @@ package net.dogpoo.api.core.kakao.service;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.kakao.mapper.TutorWelcomeBlockMapper;
@@ -10,9 +9,15 @@ import net.dogpoo.api.core.kakao.service.util.ModelParseUtil;
 
 @Service
 public class TutorWelcomeBlockService {
+
+    public TutorWelcomeBlockService(TutorWelcomeBlockMapper mapper, KakaoChatbotEnglishService chatbot) {
+        this.mapper = mapper;
+        this.chatbot = chatbot;
+    }
+
 	
-	@Autowired TutorWelcomeBlockMapper mapper;
-	@Autowired KakaoChatbotEnglishService chatbot;
+	private final TutorWelcomeBlockMapper mapper;
+	private final KakaoChatbotEnglishService chatbot;
 	
 	public HashMap<String, Object> updateUserGender(HashMap<String, Object> paramMap) {
 		HashMap<String, String> params = ModelParseUtil.getRequestParams(paramMap);

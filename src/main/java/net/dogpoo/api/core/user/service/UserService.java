@@ -5,7 +5,6 @@ import java.util.HashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -23,9 +22,17 @@ import net.dogpoo.api.core.user.model.UserModel;
 
 @Service
 public class UserService implements UserDetailsService {
+
+    public UserService(
+            UserMapper mapper,
+            @org.springframework.context.annotation.Lazy AuthenticationManager authenticationManager) {
+        this.mapper = mapper;
+        this.authenticationManager = authenticationManager;
+    }
+
 	
-	@Autowired UserMapper mapper;
-	@Autowired @org.springframework.context.annotation.Lazy AuthenticationManager authenticationManager;
+	private final UserMapper mapper;
+	private final AuthenticationManager authenticationManager;
 
 	private final static Logger logger = LoggerFactory.getLogger(UserService.class);
 

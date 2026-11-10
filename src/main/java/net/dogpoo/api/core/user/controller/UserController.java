@@ -2,7 +2,6 @@ package net.dogpoo.api.core.user.controller;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,9 +15,15 @@ import net.dogpoo.api.core.user.service.util.UserServiceUtil;
 @RestController
 @RequestMapping("/user/common")
 public class UserController {
+
+    public UserController(UserService service, UserServiceUtil serviceUtil) {
+        this.service = service;
+        this.serviceUtil = serviceUtil;
+    }
+
 	
-	@Autowired UserService service;
-	@Autowired UserServiceUtil serviceUtil;
+	private final UserService service;
+	private final UserServiceUtil serviceUtil;
 	
 	private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 	

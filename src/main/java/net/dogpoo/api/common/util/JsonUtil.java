@@ -14,6 +14,11 @@ import org.json.simple.parser.ParseException;
 import com.google.gson.Gson;
 
 public final class JsonUtil {
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Gson GSON = new Gson();
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(JsonUtil.class);
+    private JsonUtil() {}
+
 	
 	public static JSONObject mapToJsonObject(HashMap<String, Object> paramMap) {
 		JSONObject jsonObject = new JSONObject(paramMap);
@@ -21,16 +26,16 @@ public final class JsonUtil {
 	}
 	
 	public static String listToJsonString(List<HashMap<String, String>> dataList) {
-		String json = new Gson().toJson(dataList);
+		String json = GSON.toJson(dataList);
 		return json;
 	}
 	
 	public static HashMap<String, Object> jsonParamStrToObjectMap(String params) {
 		HashMap<String, Object> paramMap = new HashMap<String, Object>();
 		try {
-			paramMap = new ObjectMapper().readValue(params, new TypeReference<HashMap<String, Object>>() {});
+			paramMap = MAPPER.readValue(params, new TypeReference<HashMap<String, Object>>() {});
 		} catch (IOException e) {
-			e.printStackTrace();
+			LOG.debug("JSON parsing failed");
 		}
 		return paramMap;
 	}
@@ -38,9 +43,9 @@ public final class JsonUtil {
 	public static HashMap<String, String> jsonParamStrToMap(String params) {
 		HashMap<String, String> paramMap = new HashMap<String, String>();
 		try {
-			paramMap = new ObjectMapper().readValue(params, new TypeReference<HashMap<String, String>>() {});
+			paramMap = MAPPER.readValue(params, new TypeReference<HashMap<String, String>>() {});
 		} catch (IOException e) {
-			e.printStackTrace();
+			LOG.debug("JSON parsing failed");
 		}
 		return paramMap;
 	}
@@ -48,9 +53,9 @@ public final class JsonUtil {
 	public static List<HashMap<String, String>> jsonParamStrToList(String params) {
 		List<HashMap<String, String>> paramMap = new ArrayList<HashMap<String, String>>();
 		try {
-			paramMap = new ObjectMapper().readValue(params, new TypeReference<List<HashMap<String, String>>>() {});
+			paramMap = MAPPER.readValue(params, new TypeReference<List<HashMap<String, String>>>() {});
 		} catch (IOException e) {
-			e.printStackTrace();
+			LOG.debug("JSON parsing failed");
 		}
 		return paramMap;
 	}
@@ -61,8 +66,8 @@ public final class JsonUtil {
 		try {
 			root = (JSONObject) parser.parse(jsonStr);
 		} catch (ParseException e) {
-			System.out.println(jsonStr);
-			e.printStackTrace();
+			// Do not log raw payloads.
+			LOG.debug("JSON parsing failed");
 		}
 		return root;
 	}

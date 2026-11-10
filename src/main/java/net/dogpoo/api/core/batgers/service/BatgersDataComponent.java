@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import net.dogpoo.api.core.batgers.mapper.BatgersGamePlayMapper;
@@ -12,8 +11,13 @@ import net.dogpoo.api.core.batgers.mapper.BatgersStatisticsMapper;
 
 @Component
 public class BatgersDataComponent {
+
+    public BatgersDataComponent(BatgersGamePlayMapper mapper) {
+        this.mapper = mapper;
+    }
+
 	
-	@Autowired BatgersGamePlayMapper mapper;
+	private final BatgersGamePlayMapper mapper;
 	
 	public HashMap<String, Object> getPastMatchInfo(String parentCd) {
 		HashMap<String, Object> dataMap = new HashMap<String, Object>();

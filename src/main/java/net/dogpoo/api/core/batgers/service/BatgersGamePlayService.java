@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.json.simple.parser.ParseException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.core.batgers.mapper.BatgersGamePlayMapper;
@@ -13,8 +12,13 @@ import net.dogpoo.api.core.batgers.mapper.BatgersGamePlayMapper;
 @Service
 public class BatgersGamePlayService {
 
-	@Autowired BatgersGamePlayMapper mapper;
-	@Autowired BatgersDataComponent component;
+    public BatgersGamePlayService(BatgersGamePlayMapper mapper, BatgersDataComponent component) {
+        this.mapper = mapper;
+        this.component = component;
+    }
+
+	private final BatgersGamePlayMapper mapper;
+	private final BatgersDataComponent component;
 	
 	public HashMap<String, Object> getMatchStatus() {
 		HashMap<String, Object> resMap = new HashMap<String, Object>();

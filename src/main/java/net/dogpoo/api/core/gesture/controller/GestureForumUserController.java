@@ -3,7 +3,6 @@ package net.dogpoo.api.core.gesture.controller;
 import java.io.IOException;
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -20,14 +19,24 @@ import net.dogpoo.api.core.user.service.UserService;
 @RestController
 @RequestMapping("/gesture/forum/user")
 public class GestureForumUserController {
+
+    public GestureForumUserController(
+            GestureForumUserService service,
+            UserService userService,
+            JwtTokenUtil jwtTokenUtil) {
+        this.service = service;
+        this.userService = userService;
+        this.jwtTokenUtil = jwtTokenUtil;
+    }
+
 	
 	private static final String JSON_UTF8 = "application/json;charset=UTF-8";
 	private static final String AUTHORIZATION = "Authorization";
 	private static final String TARGET = "GESTURE";
 	
-	@Autowired GestureForumUserService service;
-	@Autowired UserService userService;
-	@Autowired JwtTokenUtil jwtTokenUtil;
+	private final GestureForumUserService service;
+	private final UserService userService;
+	private final JwtTokenUtil jwtTokenUtil;
 	
 	@RequestMapping(value = "/checkToken", method = RequestMethod.POST, produces = JSON_UTF8)
 	public HashMap<String, Object> checkToken(@RequestHeader(value = AUTHORIZATION) String authorization) {

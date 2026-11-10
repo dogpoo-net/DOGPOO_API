@@ -2,7 +2,6 @@ package net.dogpoo.api.core.watchhome.service;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import net.dogpoo.api.common.util.StringUtil;
@@ -10,8 +9,13 @@ import net.dogpoo.api.core.watchhome.mapper.WatchHomeTestMapper;
 
 @Service
 public class WatchHomeTestService {
+
+    public WatchHomeTestService(WatchHomeTestMapper mapper) {
+        this.mapper = mapper;
+    }
+
 	
-	@Autowired WatchHomeTestMapper mapper;
+	private final WatchHomeTestMapper mapper;
 	private static final String SERVER_PORT = "25000";
 	
 	public HashMap<String, Object> getServerNo(String serverIp) {
