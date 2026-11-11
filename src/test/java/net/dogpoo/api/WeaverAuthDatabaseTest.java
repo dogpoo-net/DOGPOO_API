@@ -22,7 +22,7 @@ class WeaverAuthDatabaseTest {
  String email="auth-test-"+UUID.randomUUID()+"@example.invalid";
  @AfterEach void cleanup(){jdbc.update("DELETE FROM WEAVER_USER_ACCOUNT WHERE email=?",email);}
  @Test void realDatabaseVerificationSessionAndRollback() {
-  var r=new WeaverAuthRequest();r.email=email;r.password="test-only-long-password";r.passwordConfirmation=r.password;
+  var r=new WeaverAuthRequest();r.name="테스트 사용자";r.email=email;r.password="test-only-long-password";r.passwordConfirmation=r.password;
   service.signup(r);
   var token=org.mockito.ArgumentCaptor.forClass(String.class);verify(mail).send(eq(email),token.capture());
   assertEquals(403,assertThrows(ResponseStatusException.class,()->service.login(r)).getStatusCode().value());

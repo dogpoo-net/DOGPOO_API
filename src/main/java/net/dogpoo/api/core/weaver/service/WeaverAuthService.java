@@ -31,8 +31,15 @@ public class WeaverAuthService {
   if(value==null || value.length()<10 || value.getBytes(StandardCharsets.UTF_8).length>72)
    throw bad("비밀번호는 10자 이상, UTF-8 기준 72바이트 이하로 입력해주세요.");
  }
+ public static String name(String value) {
+  String name=value==null?"":value.strip();
+  if(name.isEmpty() || name.codePointCount(0,name.length())>80 || name.codePoints().anyMatch(Character::isISOControl))
+   throw bad("이름을 1~80자로 입력해주세요.");
+  return name;
+ }
  public static void validateCredentials(WeaverAuthRequest request,boolean signup) {
   email(request.email);password(request.password);
+  if(signup)name(request.name);
   if(signup && !request.password.equals(request.passwordConfirmation)) throw bad("비밀번호가 일치하지 않습니다.");
  }
  @Transactional
@@ -42,7 +49,7 @@ public class WeaverAuthService {
   String hash=encoder.encode(request.password);
   if(mapper.account(email)!=null) return; // Identical public response for existing accounts.
   String id=UUID.randomUUID().toString();
-  mapper.insertAccount(id,email,hash);
+  mapper.insertAccount(id,email,hash,name(request.name));
   send(id,email);
  }
  @Transactional
@@ -64,13 +71,17 @@ public class WeaverAuthService {
  }
  @Transactional
  public Map<String,Object> login(WeaverAuthRequest request) {
+  WeaverAccount account=authenticate(request);
+  String token=randomToken();mapper.cleanSessions();mapper.session(hash(token),account.id());
+  return Map.of("id",account.id(),"email",account.email(),"sessionToken",token,"expiresIn",43200);
+ }
+ public WeaverAccount authenticate(WeaverAuthRequest request) {
   String email=email(request.email);password(request.password);
   WeaverAccount account=mapper.account(email);
   boolean matched=encoder.matches(request.password,account==null?dummyHash:account.passwordHash());
   if(!matched || account==null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"이메일 또는 비밀번호를 확인해주세요.");
   if(account.verifiedAt()==null) throw new ResponseStatusException(HttpStatus.FORBIDDEN,"이메일 인증 후 로그인해주세요.");
-  String token=randomToken();mapper.cleanSessions();mapper.session(hash(token),account.id());
-  return Map.of("id",account.id(),"email",account.email(),"sessionToken",token,"expiresIn",43200);
+  return account;
  }
  public Map<String,Object> me(String authorization) {
   WeaverAccount account=mapper.sessionAccount(hash(bearer(authorization)));

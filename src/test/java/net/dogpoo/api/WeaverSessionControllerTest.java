@@ -1,0 +1,26 @@
+package net.dogpoo.api;
+import java.util.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import net.dogpoo.api.core.weaver.controller.WeaverSessionController;
+import net.dogpoo.api.core.weaver.service.*;
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+class WeaverSessionControllerTest {
+ @Test void webCookieIsHttpOnlySecureSessionScopedAndRequiresOriginAndTabProof() throws Exception {
+  var service=mock(WeaverSessionService.class);
+  when(service.login(any(),eq("web"),any())).thenAnswer(i->new HashMap<>(Map.of("id","id","email","a@example.com","expiresIn",1800,"cookieToken","private-cookie")));
+  var mvc=MockMvcBuilders.standaloneSetup(new WeaverSessionController(service,new WeaverAuthRateLimit(),mock(WeaverKakaoGateway.class),mock(WeaverSocialAccountService.class),mock(WeaverOAuthService.class),"https://weaver.dogpoo.net")).build();
+  String route="/weaver/api/auth/session/web/login", body="{\"email\":\"a@example.com\",\"password\":\"long-password\"}";
+  mvc.perform(post(route).contentType("application/json").content(body)).andExpect(status().isForbidden());
+  mvc.perform(post(route).header("Origin","https://evil.dogpoo.net").contentType("application/json").content(body)).andExpect(status().isForbidden());
+  mvc.perform(post(route).header("Origin","https://weaver.dogpoo.net").header("X-Weaver-Tab","a".repeat(32)).contentType("application/json").content(body)).andExpect(status().isUnauthorized());
+  var result=mvc.perform(post(route).header("Origin","https://weaver.dogpoo.net").header("X-Weaver-Tab","a".repeat(32)).header("X-Weaver-Proof","b".repeat(43)).contentType("application/json").content(body))
+    .andExpect(status().isOk()).andExpect(jsonPath("$.cookieToken").doesNotExist()).andExpect(jsonPath("$.refreshToken").doesNotExist()).andExpect(header().string("Cache-Control","no-store")).andReturn();
+  String cookie=result.getResponse().getHeader("Set-Cookie");
+  assertTrue(cookie.startsWith("__Host-weaver-"));assertTrue(cookie.contains("HttpOnly"));assertTrue(cookie.contains("Secure"));assertTrue(cookie.contains("SameSite=Strict"));
+  assertFalse(cookie.contains("Max-Age"));assertFalse(cookie.contains("Expires"));assertFalse(cookie.contains("Domain="));
+ }
+}

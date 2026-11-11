@@ -14,10 +14,10 @@ class WeaverAuthServiceTest {
  WeaverVerificationMail mail=mock(WeaverVerificationMail.class);
  BCryptPasswordEncoder encoder=new BCryptPasswordEncoder(4);
  WeaverAuthService service=new WeaverAuthService(mapper,encoder,mail);
- WeaverAuthRequest request(){var r=new WeaverAuthRequest();r.email="Person@Example.com";r.password="test-only-long-password";r.passwordConfirmation=r.password;return r;}
+ WeaverAuthRequest request(){var r=new WeaverAuthRequest();r.name="테스트 사용자";r.email="Person@Example.com";r.password="test-only-long-password";r.passwordConfirmation=r.password;return r;}
  @Test void signupHashesPasswordAndToken() {
   var r=request();service.signup(r);
-  verify(mapper).insertAccount(anyString(),eq("person@example.com"),argThat(h->!h.equals(r.password)&&encoder.matches(r.password,h)));
+  verify(mapper).insertAccount(anyString(),eq("person@example.com"),argThat(h->!h.equals(r.password)&&encoder.matches(r.password,h)),eq("테스트 사용자"));
   var token=org.mockito.ArgumentCaptor.forClass(String.class);
   verify(mail).send(eq("person@example.com"),token.capture());
   assertEquals(43,token.getValue().length());
@@ -31,7 +31,7 @@ class WeaverAuthServiceTest {
  }
  @Test void existingEmailNeverReplacesPasswordOrSendsMail() {
   when(mapper.account("person@example.com")).thenReturn(new WeaverAccount("id","person@example.com","hash",null));
-  service.signup(request());verify(mapper,never()).insertAccount(any(),any(),any());verifyNoInteractions(mail);
+  service.signup(request());verify(mapper,never()).insertAccount(any(),any(),any(),any());verifyNoInteractions(mail);
  }
  @Test void loginRejectsWrongPasswordAndUnverifiedAccount() {
   var r=request();when(mapper.account("person@example.com")).thenReturn(new WeaverAccount("id","person@example.com",encoder.encode(r.password),null));
