@@ -32,7 +32,7 @@ public class TelegramBotBuildDataController {
 		JSONParser parser = new JSONParser();
 		JSONObject root = (JSONObject) parser.parse(params);
 		String originKey = root.get("originKey").toString();
-		if(!"6rCV7ISx7ZuI6rOg7LaUISEh".equals(originKey)) {
+		if(!originKey.equals(System.getenv("TELEGRAM_WEBHOOK_TOKEN"))) {
 			return false;
 		}
 		String ccode = root.get("ccode").toString();

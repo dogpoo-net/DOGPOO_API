@@ -21,7 +21,8 @@ and external requests. No schema initialization or migration runs automatically.
 Optional integration environment variables:
 SMTP_HOST, SMTP_FROM, SMTP_USERNAME, SMTP_PASSWORD,
 KAKAO_WEBHOOK_TOKEN, CHATGPT_API_KEY, BATGERS_API_KEY, EXIM_API_KEY,
-TELEGRAM_BOT_PATH (the existing Telegram URL path, including its token).
+TELEGRAM_BOT_PATH (the existing Telegram URL path, including its token),
+TELEGRAM_WEBHOOK_TOKEN (the existing inbound Telegram shared token).
 Configure the relevant integration before using its endpoints.
 
 ## Changes and compatibility
