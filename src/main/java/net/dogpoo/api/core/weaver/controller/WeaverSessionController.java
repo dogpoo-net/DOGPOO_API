@@ -19,6 +19,7 @@ public class WeaverSessionController {
  private final WeaverKakaoGateway kakaoGateway;
  private final WeaverSocialAccountService kakao;
  private final WeaverOAuthService oauth;
+ @org.springframework.beans.factory.annotation.Autowired private WeaverGoogleGateway google;
  public WeaverSessionController(WeaverSessionService sessions,WeaverAuthRateLimit limits,WeaverKakaoGateway kakaoGateway,WeaverSocialAccountService kakao,WeaverOAuthService oauth,
   @Value("${WEAVER_WEB_ORIGIN:https://weaver.dogpoo.net}") String origin){this.sessions=sessions;this.limits=limits;this.origin=origin;this.kakaoGateway=kakaoGateway;this.kakao=kakao;this.oauth=oauth;}
  @ModelAttribute public void guard(HttpServletRequest request,HttpServletResponse response){
@@ -57,6 +58,10 @@ public class WeaverSessionController {
  @PostMapping({"/web/naver/finish","/web/github/finish","/web/gitlab/finish"}) public Map<String,Object> webOAuthFinish(@RequestBody WeaverSessionRequest request,HttpServletRequest r,HttpServletResponse response){
   var result=oauth.finish(provider(r),request.flow,"web",r.getHeader("X-Weaver-Proof"),null,cookie(r),r.getHeader("X-Weaver-Proof"));
   if(result.containsKey("cookieToken"))cookie(r,response,(String)result.remove("cookieToken"),false);return result;
+ }
+ @PostMapping("/native/google") public Map<String,Object> nativeGoogle(@RequestBody WeaverSessionRequest request){return sessions.issue(kakao.resolve(google.verify(request.idToken),null),"native",null);}
+ @PostMapping("/web/google") public Map<String,Object> webGoogle(@RequestBody WeaverSessionRequest request,HttpServletRequest r,HttpServletResponse response){
+  var result=sessions.issue(kakao.resolve(google.verify(request.idToken),null),"web",r.getHeader("X-Weaver-Proof"));cookie(r,response,(String)result.remove("cookieToken"),false);return result;
  }
  @PostMapping("/native/kakao") public Map<String,Object> nativeKakao(@RequestBody WeaverSessionRequest request){
   var account=kakao.resolve(kakaoGateway.verify(request.kakaoToken),null);return sessions.issue(account,"native",null);
