@@ -97,3 +97,19 @@ JWT key formatting is not strict Base64, so replacing JJWT without first checkin
 real existing tokens is deferred. Full modernization and production equivalence
 are not claimed; remaining work includes JWT/key migration, integration adapters,
 service ownership checks and per-endpoint database-backed contract tests.
+
+## Restored WEAVER API
+
+The three Java files under `core.weaver` were copied byte-for-byte from
+`/home/ocaptain/tomcat/webapps/ROOT.war` (which included original Java sources).
+No changes were made to their logic, annotations or SQL. Both endpoints use POST:
+
+* `/dogpoo/weaver/api/test/insertWeaverTestData`: JSON fields `account`, `jsonData`.
+* `/dogpoo/weaver/api/test/getWeaverTestData`: JSON field `account`.
+
+The `/dogpoo` prefix comes from the existing DispatcherServlet mapping. Exact
+prefixed paths are public as well as the previously requested unprefixed whitelist
+entries; whitelist entries alone do not register unprefixed handlers. Source-only
+MockMvc tests verify original success envelopes and that DATA remains a JSON string.
+The original source's null handling is retained: an account with no row may cause
+an error because getWeaverTestData calls isEmpty() without a null check.
