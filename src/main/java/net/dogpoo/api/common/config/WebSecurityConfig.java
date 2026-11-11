@@ -51,6 +51,7 @@ public class WebSecurityConfig {
 		configuration.addAllowedOrigin("https://gesture.dogpoo.net");
 		configuration.addAllowedOrigin("https://convatar.dogpoo.net");
 		configuration.addAllowedOrigin("https://batgers.dogpoo.net");
+		configuration.addAllowedOrigin("https://weaver.dogpoo.net");
 		configuration.addAllowedMethod("*");
 		configuration.addAllowedHeader("*");
 		configuration.setAllowCredentials(true);
