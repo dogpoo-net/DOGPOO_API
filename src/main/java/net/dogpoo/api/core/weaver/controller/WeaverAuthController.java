@@ -22,7 +22,7 @@ public class WeaverAuthController {
    limits.check("email:"+body.email.strip().toLowerCase(java.util.Locale.ROOT),5);
   }
  }
- private Map<String,String> sent(){return Map.of("message","가입 가능한 이메일이면 인증메일을 보냈습니다. 받은편지함과 스팸함을 확인해주세요. 기존 계정은 로그인하거나 인증메일을 다시 요청해주세요.");}
+ private Map<String,String> sent(){return Map.of("message","입력하신 이메일 주소로 인증 메일을 발송했습니다. 메일함과 스팸메일함을 확인해 주세요. 기존 계정은 로그인하거나 인증메일을 다시 요청해주세요.");}
  @PostMapping("/signup") public Map<String,String> signup(@RequestBody WeaverAuthRequest body,HttpServletRequest r){limit(r,body);WeaverAuthService.validateCredentials(body,true);try{service.signup(body);}catch(DuplicateKeyException ignored){}return sent();}
  @PostMapping("/resend") public Map<String,String> resend(@RequestBody WeaverAuthRequest body,HttpServletRequest r){limit(r,body);service.resend(body.email);return sent();}
  @PostMapping("/verify") public Map<String,String> verify(@RequestBody WeaverAuthRequest body,HttpServletRequest r){limit(r,body);service.verify(body.token);return Map.of("message","이메일 인증이 완료되었습니다. 로그인해주세요.");}
