@@ -1,0 +1,8 @@
+package net.dogpoo.api.core.weaver.mapper;
+import org.apache.ibatis.annotations.*;import java.util.*;
+@Mapper public interface WeaverHistoryMapper {
+ @Select("SELECT COALESCE(MAX(version),0) FROM WEAVER_DOCUMENT_HISTORY WHERE workspace_id=#{workspace} AND document_key=#{key}") long version(@Param("workspace") String workspace,@Param("key") String key);
+ @Insert("INSERT INTO WEAVER_DOCUMENT_HISTORY(workspace_id,document_key,document_id,version,actor_id,created_at,action,before_text,after_text,changes,added_chars,removed_chars) VALUES(#{workspace},#{key},#{document},#{version},#{actor},UTC_TIMESTAMP(6),#{action},#{before,typeHandler=org.apache.ibatis.type.StringTypeHandler},#{after,typeHandler=org.apache.ibatis.type.StringTypeHandler},#{changes},#{added},#{removed})") void insert(Map<String,Object> data);
+ @Select("SELECT h.version,DATE_FORMAT(h.created_at,'%Y-%m-%dT%H:%i:%s.%fZ') AS createdAt,h.action,COALESCE(a.display_name,'탈퇴한 사용자') AS actorName,h.actor_id AS actorId,h.added_chars AS added,h.removed_chars AS removed,h.changes,h.before_text AS beforeText,h.after_text AS afterText FROM WEAVER_DOCUMENT_HISTORY h LEFT JOIN WEAVER_USER_ACCOUNT a ON a.id=h.actor_id WHERE h.workspace_id=#{workspace} AND h.document_key=#{key} AND h.version<#{before} ORDER BY h.version DESC LIMIT 50") List<Map<String,Object>> list(@Param("workspace") String workspace,@Param("key") String key,@Param("before") long before);
+ @Select("SELECT COALESCE(SUM(OCTET_LENGTH(before_text)+OCTET_LENGTH(after_text)+OCTET_LENGTH(changes)),0) FROM WEAVER_DOCUMENT_HISTORY WHERE workspace_id=#{id}") long bytes(String id);
+}
