@@ -22,6 +22,12 @@ class ApplicationCompatibilityTest {
    assertEquals(200,post.statusCode()); assertEquals("{\"result\":\"포스트 통신 정상\"}",post.body());
    var denied=client.send(HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/dogpoo/private")).header("Authorization","Bearer invalid.token.value").build(),HttpResponse.BodyHandlers.ofString());
    assertEquals(401,denied.statusCode());
+   var invalidSignup=client.send(HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/dogpoo/weaver/api/auth/signup")).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString("{\"email\":\"invalid\"}")).build(),HttpResponse.BodyHandlers.ofString());
+   assertEquals(400,invalidSignup.statusCode());
+   assertEquals("no-store",invalidSignup.headers().firstValue("Cache-Control").orElse(""));
+   var anonymousMe=client.send(HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/dogpoo/weaver/api/auth/me")).build(),HttpResponse.BodyHandlers.ofString());
+   assertEquals(401,anonymousMe.statusCode());
+
   }
  }
 }
