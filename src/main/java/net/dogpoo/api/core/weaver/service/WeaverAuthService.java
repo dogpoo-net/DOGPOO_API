@@ -32,6 +32,13 @@ public class WeaverAuthService {
   if(value==null || value.length()<10 || value.getBytes(StandardCharsets.UTF_8).length>72)
    throw bad("비밀번호는 10자 이상, UTF-8 기준 72바이트 이하로 입력해주세요.");
  }
+ public static String socialName(String value,String email) {
+  String clean=value==null?"":value.replaceAll("[\\p{Cntrl}]", "").strip();
+  if(clean.isEmpty())clean=email.split("@",2)[0];
+  if(clean.isBlank())clean="사용자";
+  if(clean.codePointCount(0,clean.length())>80)clean=clean.substring(0,clean.offsetByCodePoints(0,80));
+  return clean;
+ }
  public static String name(String value) {
   String name=value==null?"":value.strip();
   if(name.isEmpty() || name.codePointCount(0,name.length())>80 || name.codePoints().anyMatch(Character::isISOControl))

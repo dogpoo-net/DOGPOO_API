@@ -45,7 +45,7 @@ public class WeaverGithubGateway {
   }
   if(email==null)throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,"GitHub에 인증된 이메일을 등록하고 이메일 제공 권한을 허용해주세요.");
   String name=profile.path("name").asText("");if(name.isBlank())name=profile.path("login").asText();
-  return new WeaverSocialIdentity("github",profile.path("id").asText(),WeaverAuthService.email(email),WeaverAuthService.name(name),profile.path("avatar_url").asText(null));
+  return new WeaverSocialIdentity("github",profile.path("id").asText(),WeaverAuthService.email(email),WeaverAuthService.socialName(name,email),profile.path("avatar_url").asText(null));
  }
  private static ResponseStatusException denied(){return new ResponseStatusException(HttpStatus.UNAUTHORIZED,"GitHub 인증 정보를 확인하지 못했습니다. 다시 시도해주세요.");}
 }

@@ -29,7 +29,7 @@ public class WeaverKakaoGateway {
   if(!account.path("is_email_valid").asBoolean() || !account.path("is_email_verified").asBoolean())
    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,"카카오 계정의 인증된 이메일 제공 동의가 필요합니다.");
   String email=WeaverAuthService.email(account.path("email").asText());
-  String name=WeaverAuthService.name(account.path("profile").path("nickname").asText());
+  String name=WeaverAuthService.socialName(account.path("profile").path("nickname").asText(),email);
   return new WeaverSocialIdentity("kakao",profile.path("id").asText(),email,name,account.path("profile").path("profile_image_url").asText(null));
  }
  private JsonNode get(String path,String token){

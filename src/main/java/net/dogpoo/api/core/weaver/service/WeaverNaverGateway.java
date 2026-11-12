@@ -38,7 +38,7 @@ public class WeaverNaverGateway {
   if(!"00".equals(data.path("resultcode").asText()))throw denied();
   var profile=data.path("response");String id=profile.path("id").asText();
   if(id.isBlank() || id.length()>128)throw denied();
-  return new WeaverSocialIdentity("naver",id,WeaverAuthService.email(profile.path("email").asText()),WeaverAuthService.name(profile.path("name").asText()),profile.path("profile_image").asText(null));
+  return new WeaverSocialIdentity("naver",id,WeaverAuthService.email(profile.path("email").asText()),WeaverAuthService.socialName(profile.path("name").asText(),profile.path("email").asText()),profile.path("profile_image").asText(null));
  }
  private static ResponseStatusException denied(){return new ResponseStatusException(HttpStatus.UNAUTHORIZED,"네이버 인증 정보를 확인하지 못했습니다. 다시 시도해주세요.");}
 }

@@ -47,6 +47,9 @@ public class WeaverSessionController {
   response.addHeader(HttpHeaders.SET_COOKIE,builder.build().toString());
  }
  private void credentials(WeaverAuthRequest request){WeaverAuthService.validateCredentials(request,false);limits.check("login:"+WeaverAuthService.email(request.email),5);}
+ private WeaverSocialIdentity googleIdentity(WeaverSessionRequest request){
+  return request.googleAccessToken!=null?google.verifyAccessToken(request.googleAccessToken):google.verify(request.idToken);
+ }
  private String provider(HttpServletRequest r){return r.getRequestURI().contains("/github/")?"github":r.getRequestURI().contains("/gitlab/")?"gitlab":"naver";}
  @PostMapping({"/native/naver/start","/native/github/start","/native/gitlab/start"}) public Map<String,Object> nativeOAuthStart(@RequestBody WeaverSessionRequest request,HttpServletRequest r,@RequestHeader(value="Authorization",required=false) String bearer){
   String link=request.link?(String)sessions.me(bearer).get("id"):null;return oauth.start(provider(r),"native",request.proof,link);
@@ -59,9 +62,9 @@ public class WeaverSessionController {
   var result=oauth.finish(provider(r),request.flow,"web",r.getHeader("X-Weaver-Proof"),null,cookie(r),r.getHeader("X-Weaver-Proof"));
   if(result.containsKey("cookieToken"))cookie(r,response,(String)result.remove("cookieToken"),false);return result;
  }
- @PostMapping("/native/google") public Map<String,Object> nativeGoogle(@RequestBody WeaverSessionRequest request){return sessions.issue(kakao.resolve(google.verify(request.idToken),null),"native",null);}
+ @PostMapping("/native/google") public Map<String,Object> nativeGoogle(@RequestBody WeaverSessionRequest request){return sessions.issue(kakao.resolve(googleIdentity(request),null),"native",null);}
  @PostMapping("/web/google") public Map<String,Object> webGoogle(@RequestBody WeaverSessionRequest request,HttpServletRequest r,HttpServletResponse response){
-  var result=sessions.issue(kakao.resolve(google.verify(request.idToken),null),"web",r.getHeader("X-Weaver-Proof"));cookie(r,response,(String)result.remove("cookieToken"),false);return result;
+  var result=sessions.issue(kakao.resolve(googleIdentity(request),null),"web",r.getHeader("X-Weaver-Proof"));cookie(r,response,(String)result.remove("cookieToken"),false);return result;
  }
  @PostMapping("/native/kakao") public Map<String,Object> nativeKakao(@RequestBody WeaverSessionRequest request){
   var account=kakao.resolve(kakaoGateway.verify(request.kakaoToken),null);return sessions.issue(account,"native",null);
@@ -71,10 +74,10 @@ public class WeaverSessionController {
   var result=sessions.issue(account,"web",r.getHeader("X-Weaver-Proof"));cookie(r,response,(String)result.remove("cookieToken"),false);return result;
  }
  @PostMapping("/native/google/link") public Map<String,String> nativeGoogleLink(@RequestBody WeaverSessionRequest request,@RequestHeader(value="Authorization",required=false) String bearer){
-  kakao.resolve(google.verify(request.idToken),(String)sessions.me(bearer).get("id"));return Map.of("message","Google 계정을 연결했습니다.");
+  kakao.resolve(googleIdentity(request),(String)sessions.me(bearer).get("id"));return Map.of("message","Google 계정을 연결했습니다.");
  }
  @PostMapping("/web/google/link") public Map<String,String> webGoogleLink(@RequestBody WeaverSessionRequest request,HttpServletRequest r){
-  kakao.resolve(google.verify(request.idToken),(String)sessions.webResume(cookie(r),r.getHeader("X-Weaver-Proof")).get("id"));return Map.of("message","Google 계정을 연결했습니다.");
+  kakao.resolve(googleIdentity(request),(String)sessions.webResume(cookie(r),r.getHeader("X-Weaver-Proof")).get("id"));return Map.of("message","Google 계정을 연결했습니다.");
  }
  @PostMapping("/native/kakao/link") public Map<String,String> nativeKakaoLink(@RequestBody WeaverSessionRequest request,@RequestHeader(value="Authorization",required=false) String bearer){
   String id=(String)sessions.me(bearer).get("id");kakao.resolve(kakaoGateway.verify(request.kakaoToken),id);return Map.of("message","카카오 계정을 연결했습니다.");
