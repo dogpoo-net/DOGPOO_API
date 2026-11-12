@@ -67,7 +67,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   }
   if(importing)mapper.claim(request.guestId,id,request.sourceHash);
   if(!request.changes.isEmpty()){mapper.advance(id);revision++;}
-  for(var c:request.changes){var old=mapper.item(id,key(c.kind,c.id));String after=c.deleted?null:c.value.toString();history.record(id,actor,c.kind,c.id,old==null||old.deleted()?null:old.payload(),after,importing?"import":"edit");mapper.put(id,key(c.kind,c.id),c.kind,c.id,after,c.deleted,revision);}
+  for(var c:request.changes){var old=mapper.item(id,key(c.kind,c.id));String after=c.deleted?null:c.value.toString();history.record(id,actor,c.kind,c.id,old==null||old.deleted()?null:old.payload(),after,importing?"import":"edit");mapper.put(id,key(c.kind,c.id),c.kind,c.id,after,c.deleted,revision);if((c.kind.equals("list:notes")||c.kind.equals("list:elements")) && (old==null || !Objects.equals(old.payload(),after)))mapper.touch(id,key(c.kind,c.id),old==null?actor:null,actor);}
   quota(id);if(importing)return result(id,0,revision);
   return Map.of("revision",revision,"changes",request.changes.stream().map(c->mapper.item(id,key(c.kind,c.id))).toList());
  }

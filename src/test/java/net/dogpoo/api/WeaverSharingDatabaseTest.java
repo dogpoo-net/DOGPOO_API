@@ -45,4 +45,10 @@ class WeaverSharingDatabaseTest {
   var stale=doc("expired",1);stale.documentLeases=edit.documentLeases;assertThrows(ResponseStatusException.class,()->data.save(a,email(a),a,stale,false));
   assertEquals(true,data.documentLease(a,email(a),b,other).get("acquired"));other.release=true;data.documentLease(a,email(a),b,other);assertEquals(true,data.documentLease(a,email(a),a,lock).get("acquired"));
  }
+ @Test void authorRemainsCreatorWhenAnotherEditorUpdatesTheDocument(){
+  jdbc.update("UPDATE WEAVER_USER_ACCOUNT SET display_name='Original Author' WHERE id=?",a);jdbc.update("UPDATE WEAVER_USER_ACCOUNT SET display_name='Other Editor' WHERE id=?",b);join(b,"editor");
+  data.save(a,email(a),a,doc("first",0),false);var result=data.save(a,email(a),b,doc("edited",1),false);
+  var row=(net.dogpoo.api.core.weaver.model.WeaverWorkspaceItem)((java.util.List<?>)result.get("changes")).get(0);
+  assertEquals("Original Author",row.author());assertNotNull(row.updatedAt());assertTrue(row.updatedAt().endsWith("Z"));
+ }
 }

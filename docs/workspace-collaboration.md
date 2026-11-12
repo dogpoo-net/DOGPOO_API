@@ -46,3 +46,9 @@ the lease blocks saves without discarding the current input. Forced tab closure
 recovers after lease expiry. Lease acquisition is authorized and serialized with
 saves; actor plus per-editor token must match. Optimistic revisions still protect
 stale content after a lease is transferred. Lease renewal does not save content.
+
+Migration 009 adds WEAVER_ITEM_METADATA for authenticated creator and last-update
+identity/time, returned alongside item payloads. Existing clients may ignore these
+optional response fields. Existing content without creator metadata stays unknown;
+editing such content never invents a creator. Another editor's save updates the
+modification time while preserving the original creator.
