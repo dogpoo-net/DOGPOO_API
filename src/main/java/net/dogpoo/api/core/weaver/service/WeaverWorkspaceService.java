@@ -52,6 +52,17 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    String owner=mapper.claimed(request.guestId);
    if(owner!=null){if(!owner.equals(id) || !request.sourceHash.equals(mapper.sourceHash(request.guestId)))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 귀속되었거나 내용이 다른 비회원 자료입니다.");return result(id,0,revision);}
   }
+  if(request.resourceId!=null){
+   if(importing || request.resourceId.isBlank() || request.resourceId.length()>512)throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+   checkEditLease(id,actor,request.resourceId,request);
+   var supplied=new HashSet<String>();var expanded=new ArrayList<>(request.changes);
+   for(var c:request.changes){var old=mapper.item(id,key(c.kind,c.id));if(!request.resourceId.equals(editResource(c.kind,c.id,c.value,old==null?null:old.payload())))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"다른 편집 영역의 데이터입니다.");supplied.add(key(c.kind,c.id));}
+   for(var old:mapper.changes(id,0)){
+    if(old.deleted() || supplied.contains(key(old.kind(),old.id())))continue;
+    if(request.resourceId.equals(editResource(old.kind(),old.id(),null,old.payload()))){var c=new WeaverWorkspaceRequest.Change();c.kind=old.kind();c.id=old.id();c.deleted=true;c.baseRevision=old.revision();expanded.add(c);}
+   }
+   request.changes=expanded;
+  }
   var removedMedia=new HashSet<String>();
   var seen=new HashSet<String>();
   for(var change:request.changes){valid(change.kind,change.id);String key=key(change.kind,change.id);if(!seen.add(key))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"중복 항목입니다.");
@@ -61,12 +72,9 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    String payload=change.deleted?null:change.value==null?null:change.value.toString();
    if(!change.deleted && (payload==null || payload.length()>10000000))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"항목 내용이 올바르지 않습니다.");
    String resource=editResource(change.kind,change.id,change.value,old==null?null:old.payload());
-   if(resource!=null){var lease=documentLocks.active(id,WeaverAuthService.hash(resource));String token=request.documentLeases==null?null:request.documentLeases.get(resource);
-    if(lease!=null && (!actor.equals(lease.get("userId")) || token==null || !WeaverAuthService.hash(token).equals(lease.get("clientHash"))))throw new ResponseStatusException(HttpStatus.LOCKED,"다른 편집 화면에서 사용 중입니다. 편집 잠금을 확인해주세요.");
-    if(token!=null && lease==null)throw new ResponseStatusException(HttpStatus.LOCKED,"편집 잠금이 만료되었습니다. 다시 편집 권한을 받아주세요.");
-   }
+   if(resource!=null)checkEditLease(id,actor,resource,request);
    boolean identical=old!=null && old.deleted()==change.deleted && Objects.equals(old.payload(),payload);
-   if(!identical && current!=change.baseRevision)throw new ResponseStatusException(HttpStatus.CONFLICT,"다른 기기에서 같은 항목을 수정했습니다. 로컬 수정은 보관됩니다.");
+   if(!identical && request.resourceId==null && current!=change.baseRevision)throw new ResponseStatusException(HttpStatus.CONFLICT,"다른 기기에서 같은 항목을 수정했습니다. 로컬 수정은 보관됩니다.");
   }
   if(importing)mapper.claim(request.guestId,id,request.sourceHash);
   if(!request.changes.isEmpty()){mapper.advance(id);revision++;}
@@ -95,9 +103,18 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   String key=WeaverAuthService.hash(request.documentId),hash=WeaverAuthService.hash(request.leaseToken);
   if(request.release){documentLocks.release(id,key,actor,hash);return Map.of("released",true);}
   var existing=documentLocks.active(id,key);
+  if(request.takeover){documentLocks.openEditing(id,key,actor,hash);return Map.of("acquired",true,"shared",true);}
+  if(sharedEditing(existing))return Map.of("acquired",true,"shared",true);
   if(request.renewOnly && existing==null)return Map.of("acquired",false);
   if(!request.takeover && existing!=null && (!actor.equals(existing.get("userId")) || !hash.equals(existing.get("clientHash"))))return Map.of("acquired",false,"holder",Objects.toString(existing.get("name"),"다른 사용자"));
   documentLocks.renew(id,key,actor,hash);return Map.of("acquired",true,"expiresIn",120);
+ }
+ private boolean sharedEditing(Map<String,Object> lease){return lease!=null && (Boolean.TRUE.equals(lease.get("sharedEditing")) || lease.get("sharedEditing") instanceof Number n && n.intValue()!=0);}
+ private void checkEditLease(String id,String actor,String resource,WeaverWorkspaceRequest request){
+  var lease=documentLocks.active(id,WeaverAuthService.hash(resource));if(sharedEditing(lease))return;
+  String token=request.documentLeases==null?null:request.documentLeases.get(resource);
+  if(lease!=null && (!actor.equals(lease.get("userId")) || token==null || !WeaverAuthService.hash(token).equals(lease.get("clientHash"))))throw new ResponseStatusException(HttpStatus.LOCKED,"다른 편집 화면에서 사용 중입니다. 잠금을 해제해주세요.");
+  if(token!=null && lease==null)throw new ResponseStatusException(HttpStatus.LOCKED,"편집 잠금이 만료되었습니다. 잠금을 확인해주세요.");
  }
  public String editResource(String kind,String itemId,JsonNode value,String previous){
   try{
@@ -107,13 +124,13 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   }catch(Exception e){throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"편집 항목이 올바르지 않습니다.");}
  }
  @Transactional(readOnly=true) public Map<String,Object> status(String id,String actor,WeaverWorkspaceRequest request){
-  permissions.access(actor,id,false);
+  boolean canEdit=!"viewer".equals(permissions.access(actor,id,false).role());
   if(request.documentLeases==null || request.documentLeases.size()>32)throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
   var states=new HashMap<String,Object>();
   for(var entry:request.documentLeases.entrySet()){
    if(entry.getKey().length()>512 || entry.getValue()==null || !entry.getValue().matches("[a-f0-9]{64}"))throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
    var lease=documentLocks.active(id,WeaverAuthService.hash(entry.getKey()));
-   states.put(entry.getKey(),Map.of("acquired",lease!=null && actor.equals(lease.get("userId")) && WeaverAuthService.hash(entry.getValue()).equals(lease.get("clientHash")),"holder",lease==null?"":Objects.toString(lease.get("name"),"다른 사용자")));
+   states.put(entry.getKey(),Map.of("acquired",canEdit && (sharedEditing(lease) || (lease!=null && actor.equals(lease.get("userId")) && WeaverAuthService.hash(entry.getValue()).equals(lease.get("clientHash")))),"holder",lease==null?"":Objects.toString(lease.get("name"),"다른 사용자")));
   }
   Long revision=mapper.revision(id);return Map.of("revision",revision==null?0:revision,"leases",states);
  }
