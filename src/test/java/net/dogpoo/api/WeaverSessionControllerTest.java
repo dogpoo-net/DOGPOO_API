@@ -23,4 +23,23 @@ class WeaverSessionControllerTest {
   assertTrue(cookie.startsWith("__Host-weaver-"));assertTrue(cookie.contains("HttpOnly"));assertTrue(cookie.contains("Secure"));assertTrue(cookie.contains("SameSite=Strict"));
   assertFalse(cookie.contains("Max-Age"));assertFalse(cookie.contains("Expires"));assertFalse(cookie.contains("Domain="));
  }
+ @Test void invitationTabReceivesIndependentCookieOnlyAfterSourceAuthentication() throws Exception {
+  var service=mock(WeaverSessionService.class);
+  String source="a".repeat(32), target="c".repeat(32), proof="b".repeat(43), targetProof="d".repeat(43);
+  when(service.attachWeb("source-cookie",proof,targetProof)).thenAnswer(i->new HashMap<>(Map.of("id","account","cookieToken","new-cookie")));
+  var mvc=MockMvcBuilders.standaloneSetup(new WeaverSessionController(service,new WeaverAuthRateLimit(),mock(WeaverKakaoGateway.class),mock(WeaverSocialAccountService.class),mock(WeaverOAuthService.class),"https://weaver.dogpoo.net")).build();
+  String route="/weaver/api/auth/session/web/attach";
+  String body="{\"tabId\":\""+target+"\",\"proof\":\""+targetProof+"\"}";
+  mvc.perform(post(route).header("Origin","https://evil.example").contentType("application/json").content(body)).andExpect(status().isForbidden());
+  verifyNoInteractions(service);
+  var result=mvc.perform(post(route).header("Origin","https://weaver.dogpoo.net").header("X-Weaver-Tab",source).header("X-Weaver-Proof",proof).cookie(new jakarta.servlet.http.Cookie("__Host-weaver-"+source,"source-cookie")).contentType("application/json").content(body))
+   .andExpect(status().isOk()).andExpect(jsonPath("$.cookieToken").doesNotExist()).andReturn();
+  String cookie=result.getResponse().getHeader("Set-Cookie");
+  assertTrue(cookie.startsWith("__Host-weaver-"+target+"=new-cookie"));
+  assertTrue(cookie.contains("HttpOnly"));assertTrue(cookie.contains("Secure"));assertTrue(cookie.contains("SameSite=Strict"));assertFalse(cookie.contains("Max-Age"));
+  verify(service).attachWeb("source-cookie",proof,targetProof);
+  mvc.perform(post(route).header("Origin","https://weaver.dogpoo.net").header("X-Weaver-Tab",source).header("X-Weaver-Proof",proof).contentType("application/json").content(body.replace(target,source))).andExpect(status().isBadRequest());
+  when(service.attachWeb(null,proof,targetProof)).thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED));
+  mvc.perform(post(route).header("Origin","https://weaver.dogpoo.net").header("X-Weaver-Tab",source).header("X-Weaver-Proof",proof).contentType("application/json").content(body)).andExpect(status().isUnauthorized());
+ }
 }

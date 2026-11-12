@@ -88,6 +88,10 @@ public class WeaverSessionService {
   if(proof==null || !equal(hash(parts[1]),s.currentHash()) || !equal(hash(proof),s.proofHash()))throw denied();
   return s;
  }
+ @Transactional public Map<String,Object> attachWeb(String cookie,String sourceProof,String targetProof){
+  WeaverDeviceSession source=web(cookie,sourceProof);
+  return issue(mapper.account(source.userId()),"web",targetProof);
+ }
  @Transactional public Map<String,Object> webResume(String cookie,String proof){
   WeaverDeviceSession s=web(cookie,proof);mapper.touch(s.id(),now(),idle(s));return identity(s);
  }

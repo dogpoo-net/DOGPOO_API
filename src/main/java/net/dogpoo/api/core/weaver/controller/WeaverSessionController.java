@@ -92,6 +92,14 @@ public class WeaverSessionController {
   credentials(request);var result=sessions.login(request,"web",r.getHeader("X-Weaver-Proof"));
   cookie(r,response,(String)result.remove("cookieToken"),false);return result;
  }
+ @PostMapping("/web/attach") public Map<String,Object> attachWeb(@RequestBody WeaverSessionRequest request,HttpServletRequest r,HttpServletResponse response){
+  if(request.tabId==null || !request.tabId.matches("[a-f0-9]{32}") || request.tabId.equals(tab(r)) || request.proof==null || !request.proof.matches("[A-Za-z0-9_-]{43}"))
+   throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"새 탭 정보가 올바르지 않습니다.");
+  limits.check("attach:"+tab(r),10);
+  var result=sessions.attachWeb(cookie(r),r.getHeader("X-Weaver-Proof"),request.proof);
+  response.addHeader(HttpHeaders.SET_COOKIE,ResponseCookie.from("__Host-weaver-"+request.tabId,(String)result.remove("cookieToken")).httpOnly(true).secure(true).sameSite("Strict").path("/").build().toString());
+  return result;
+ }
  @PostMapping("/web/refresh") public Map<String,Object> webRefresh(HttpServletRequest r){return sessions.webResume(cookie(r),r.getHeader("X-Weaver-Proof"));}
  @PostMapping("/web/logout") public Map<String,String> webLogout(HttpServletRequest r,HttpServletResponse response){return webEnd(r,response,false);}
  @PostMapping("/web/logout-all") public Map<String,String> webLogoutAll(HttpServletRequest r,HttpServletResponse response){return webEnd(r,response,true);}
