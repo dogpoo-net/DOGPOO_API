@@ -7,21 +7,37 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  private final WeaverWorkspaceMapper workspaces;private final WeaverSharingMapper members;private final WeaverSessionMapper accounts;
  public WeaverSharingService(WeaverWorkspaceMapper workspaces,WeaverSharingMapper members,WeaverSessionMapper accounts){this.workspaces=workspaces;this.members=members;this.accounts=accounts;}
  public record Access(String id,String email,String role){}
- public Access access(String user,String workspace,boolean write){
-  String target=workspace==null || workspace.isBlank()?user:workspace;
-  String role=target.equals(user)?"owner":members.role(target,user);
+ @Transactional public Access access(String user,String workspace,boolean write){
+  String target=workspace==null || workspace.isBlank()?primary(user):workspace;
+  if(target.equals(user))workspaces.ensure(user);
+  String role=user.equals(workspaces.owner(target))?"owner":members.role(target,user);
   if(role==null || (write && role.equals("viewer")))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"이 워크스페이스를 편집할 권한이 없습니다.");
-  var owner=accounts.account(target);if(owner==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);return new Access(target,owner.email(),role);
+  var owner=accounts.account(workspaces.owner(target));if(owner==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);return new Access(target,owner.email(),role);
  }
- private void lockOwner(String user,String workspace){if(!user.equals(workspace))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 참여자를 관리할 수 있습니다.");workspaces.ensure(workspace);workspaces.lock(workspace);}
+ private void lockOwner(String user,String workspace){workspaces.ensure(workspace);workspaces.lock(workspace);if(!user.equals(workspaces.owner(workspace)))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 참여자를 관리할 수 있습니다.");}
  private String role(String role){if(!List.of("editor","viewer").contains(role==null?"":role))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"편집자 또는 읽기 전용 역할을 선택해주세요.");return role;}
  private void available(String workspace){if(1+members.editors(workspace)+members.reserved(workspace)>=2)throw new ResponseStatusException(HttpStatus.CONFLICT,"무료 워크스페이스는 소유자 포함 편집자 2명까지입니다. 대기 중인 편집자 초대도 자리를 예약합니다.");}
- public Map<String,Object> catalog(String user,String email){
-  var list=new ArrayList<Map<String,Object>>();list.add(Map.of("workspaceId",user,"role","owner","name","내 워크스페이스"));list.addAll(members.memberships(user));return Map.of("workspaces",list,"invitations",members.received(email));
+ @Transactional public String primary(String user){
+  workspaces.lockAccountId(user);workspaces.ensure(user);
+  var owned=workspaces.owned(user);
+  if(!owned.isEmpty())return (String)owned.getFirst().get("workspaceId");
+  String id=UUID.randomUUID().toString();workspaces.create(id,user);return id;
  }
- public Map<String,Object> list(String user,String workspace){var target=access(user,workspace,false);var owner=accounts.account(target.id());var list=new ArrayList<Map<String,Object>>();var item=new HashMap<String,Object>();item.put("userId",target.id());item.put("role","owner");item.put("name",owner.displayName()==null?"소유자":owner.displayName());item.put("email",owner.email());list.add(item);list.addAll(members.members(target.id()));return Map.of("members",list,"invitations",target.role().equals("owner")?members.invitations(target.id()):List.of(),"editorLimit",2);}
+ @Transactional public Map<String,Object> catalog(String user,String email){
+  String primary=primary(user);var list=new ArrayList<Map<String,Object>>(workspaces.owned(user));list.addAll(members.memberships(user));return Map.of("workspaces",list,"defaultWorkspaceId",primary,"invitations",members.received(email));
+ }
+ @Transactional public void transfer(String user,String workspace,String recipient){transferInternal(user,workspace,recipient,true);}
+ @Transactional public void transferForWithdrawal(String user,String workspace,String recipient){transferInternal(user,workspace,recipient,false);}
+ private void transferInternal(String user,String workspace,String recipient,boolean keepFormerOwner){
+  lockOwner(user,workspace);
+  if(user.equals(recipient) || members.role(workspace,recipient)==null)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"현재 참여자에게만 소유권을 이전할 수 있습니다.");
+  if(accounts.account(recipient)==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+  if(keepFormerOwner && "viewer".equals(members.role(workspace,recipient)) && 1+members.editors(workspace)+members.reserved(workspace)>=2)throw new ResponseStatusException(HttpStatus.CONFLICT,"편집자 자리를 먼저 정리해주세요.");
+  members.remove(workspace,recipient);if(keepFormerOwner)members.join(workspace,user,"editor");workspaces.transfer(workspace,recipient);
+ }
+ public Map<String,Object> list(String user,String workspace){var target=access(user,workspace,false);var owner=accounts.account(workspaces.owner(target.id()));var list=new ArrayList<Map<String,Object>>();var item=new HashMap<String,Object>();item.put("userId",owner.id());item.put("role","owner");item.put("name",owner.displayName()==null?"소유자":owner.displayName());item.put("email",owner.email());list.add(item);list.addAll(members.members(target.id()));return Map.of("members",list,"invitations",target.role().equals("owner")?members.invitations(target.id()):List.of(),"editorLimit",2);}
  @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED) public Map<String,Object> invite(String user,String workspace,String email,String role){
-  lockOwner(user,workspace);role=role(role);email=WeaverAuthService.email(email);if(accounts.account(user).email().equals(email))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"자신은 이미 소유자입니다.");
+  lockOwner(user,workspace);role=role(role);email=WeaverAuthService.email(email);if(accounts.account(workspaces.owner(workspace)).email().equals(email))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"자신은 이미 소유자입니다.");
   for(var m:members.members(workspace))if(email.equals(m.get("email")))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 참여한 사용자입니다.");
   for(var pending:members.invitations(workspace))if(email.equals(pending.get("email")))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 대기 중인 초대가 있습니다. 취소 후 다시 초대해주세요.");
   if(role.equals("editor"))available(workspace);

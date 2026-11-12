@@ -8,7 +8,7 @@ import java.util.List;
  @Select("SELECT avatar_url AS avatarUrl,avatar_path AS avatarPath,email_enabled AS emailEnabled,default_face AS defaultFace FROM WEAVER_ACCOUNT_PROFILE WHERE user_id=#{id}") WeaverProfile get(String id);
  @Select("SELECT provider FROM WEAVER_SOCIAL_ACCOUNT WHERE user_id=#{id} ORDER BY provider") List<String> providers(String id);
  @Update("UPDATE WEAVER_ACCOUNT_PROFILE SET email_enabled=#{enabled} WHERE user_id=#{id}") int email(@Param("id") String id,@Param("enabled") boolean enabled);
- @Update("UPDATE WEAVER_ACCOUNT_PROFILE SET avatar_url=#{url} WHERE user_id=#{id} AND avatar_path IS NULL") int socialAvatar(@Param("id") String id,@Param("url") String url);
+ @Update("UPDATE WEAVER_ACCOUNT_PROFILE SET avatar_url=#{url} WHERE user_id=#{id} AND avatar_path IS NULL AND (avatar_url IS NULL OR TRIM(avatar_url)='')") int socialAvatar(@Param("id") String id,@Param("url") String url);
  @Update("UPDATE WEAVER_ACCOUNT_PROFILE SET avatar_path=#{path} WHERE user_id=#{id}") int avatar(@Param("id") String id,@Param("path") String path);
  @Update("UPDATE WEAVER_USER_ACCOUNT SET display_name=#{name} WHERE id=#{id}") int name(@Param("id") String id,@Param("name") String name);
  @Select("SELECT COUNT(*) FROM WEAVER_PASSWORD_CHALLENGE WHERE user_id=#{id} AND sent_at>DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 60 SECOND)") int recent(String id);

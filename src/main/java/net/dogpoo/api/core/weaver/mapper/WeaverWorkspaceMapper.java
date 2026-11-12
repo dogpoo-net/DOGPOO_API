@@ -3,7 +3,13 @@ import org.apache.ibatis.annotations.*;import java.util.*;
 import net.dogpoo.api.core.weaver.model.WeaverWorkspaceItem;
 import net.dogpoo.api.core.weaver.model.WeaverMediaFile;
 @Mapper public interface WeaverWorkspaceMapper {
- @Insert("INSERT IGNORE INTO WEAVER_ACCOUNT_WORKSPACE(user_id) VALUES(#{id})") int ensure(String id);
+ @Insert("INSERT IGNORE INTO WEAVER_ACCOUNT_WORKSPACE(user_id,owner_id) SELECT id,id FROM WEAVER_USER_ACCOUNT WHERE id=#{id}") int ensure(String id);
+ @Select("SELECT id FROM WEAVER_USER_ACCOUNT WHERE id=#{id} FOR UPDATE") String lockAccountId(String id);
+ @Select("SELECT owner_id FROM WEAVER_ACCOUNT_WORKSPACE WHERE user_id=#{id}") String owner(String id);
+ @Select("SELECT user_id AS workspaceId,'owner' AS role,'내 워크스페이스' AS name FROM WEAVER_ACCOUNT_WORKSPACE WHERE owner_id=#{id} ORDER BY (user_id=#{id}) DESC,user_id") List<Map<String,Object>> owned(String id);
+ @Insert("INSERT INTO WEAVER_ACCOUNT_WORKSPACE(user_id,owner_id,migrated) VALUES(#{id},#{owner},TRUE)") void create(@Param("id") String id,@Param("owner") String owner);
+ @Update("UPDATE WEAVER_ACCOUNT_WORKSPACE SET owner_id=#{owner},revision=revision+1 WHERE user_id=#{id}") void transfer(@Param("id") String id,@Param("owner") String owner);
+ @Delete("DELETE FROM WEAVER_ACCOUNT_WORKSPACE WHERE user_id=#{id}") void deleteWorkspace(String id);
  @Select("SELECT revision FROM WEAVER_ACCOUNT_WORKSPACE WHERE user_id=#{id} FOR UPDATE") long lock(String id);
  @Select("SELECT revision FROM WEAVER_ACCOUNT_WORKSPACE WHERE user_id=#{id}") Long revision(String id);
  @Select("SELECT migrated FROM WEAVER_ACCOUNT_WORKSPACE WHERE user_id=#{id}") boolean migrated(String id);

@@ -25,7 +25,7 @@ six default face PNGs from WEAVER_APP_FLUTTER/assets/branding/profile to
 `${WEAVER_RESOURCE_DIR}/profile/images/default/`. Clients also bundle those files
 for offline fallback. Social avatar URLs are limited to provider CDNs; this server
 does not fetch arbitrary remote image URLs. Existing account photos are captured
-on their next successful provider login/link, while uploaded photos are preserved.
+only when no uploaded photo or previously saved social avatar URL exists. Additional links and repeated provider logins preserve the existing photo.
 
 Google linking is POST `/auth/session/{web|native}/google/link` with `idToken`.
 It uses the same verified-provider identity resolution and explicit linking policy
