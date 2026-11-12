@@ -47,4 +47,26 @@ class WeaverWorkspaceDatabaseTest {
   assertEquals(404,assertThrows(ResponseStatusException.class,()->service.mediaRead(a,email(a),media)).getStatusCode().value());
   try(var files=java.nio.file.Files.list(java.nio.file.Path.of("/tmp/weaver-workspace-media-tests/image",a))){assertEquals(0,files.count());}
  }
+ @Test void canvasAndDocumentTakeoverFencesOldDeviceAndStatusIsReadOnly()throws Exception{
+  for(String scope:List.of("canvas:diagram","canvas:boxes","project-test")){
+   var first=new WeaverWorkspaceRequest();first.documentId=scope;first.leaseToken="a".repeat(64);
+   assertEquals(true,service.documentLease(a,email(a),a,first).get("acquired"));
+   var second=new WeaverWorkspaceRequest();second.documentId=scope;second.leaseToken="b".repeat(64);
+   assertEquals(false,service.documentLease(a,email(a),a,second).get("acquired"));
+   second.takeover=true;assertEquals(true,service.documentLease(a,email(a),a,second).get("acquired"));
+   first.documentLeases=Map.of(scope,first.leaseToken);
+   var status=service.status(a,a,first);assertEquals(false,((Map<?,?>)((Map<?,?>)status.get("leases")).get(scope)).get("acquired"));
+   var save=new WeaverWorkspaceRequest();var change=new WeaverWorkspaceRequest.Change();
+   change.kind=scope.startsWith("canvas:")?"layout":"list:notes";
+   change.id=scope.equals("canvas:boxes")?"[\"page\",\"blocks\",\"positions\",\"one\"]":scope.equals("canvas:diagram")?"[\"page\",\"positions\",\"one\"]":"doc";
+   change.value=scope.startsWith("canvas:")?json.readTree("[1,2]"):json.readTree("{\"project\":{\"id\":\"project-test\",\"document\":\"test\"}}");save.changes=List.of(change);save.documentLeases=first.documentLeases;
+   assertEquals(423,assertThrows(ResponseStatusException.class,()->service.save(a,email(a),save,false)).getStatusCode().value());
+   save.documentLeases=Map.of(scope,second.leaseToken);service.save(a,email(a),save,false);
+   first.release=true;service.documentLease(a,email(a),a,first);
+   second.documentLeases=save.documentLeases;assertEquals(true,((Map<?,?>)((Map<?,?>)service.status(a,a,second).get("leases")).get(scope)).get("acquired"));
+   second.release=true;service.documentLease(a,email(a),a,second);first.release=false;first.renewOnly=true;
+   assertEquals(false,service.documentLease(a,email(a),a,first).get("acquired"));
+  }
+  assertEquals(403,assertThrows(ResponseStatusException.class,()->service.status(a,b,new WeaverWorkspaceRequest())).getStatusCode().value());
+ }
 }

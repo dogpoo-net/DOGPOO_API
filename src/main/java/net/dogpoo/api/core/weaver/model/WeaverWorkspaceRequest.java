@@ -1,7 +1,7 @@
 package net.dogpoo.api.core.weaver.model;
 import java.util.*;import com.fasterxml.jackson.databind.JsonNode;
 public class WeaverWorkspaceRequest {
- public String workspaceId,documentId,leaseToken; public boolean release;
+ public String workspaceId,documentId,leaseToken; public boolean release, takeover, renewOnly;
  public Map<String,String> documentLeases=Map.of();
  public long since; public String guestId,sourceHash,mediaId,data,mediaType;
  public List<Change> changes=List.of();

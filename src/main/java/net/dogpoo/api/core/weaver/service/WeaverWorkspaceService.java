@@ -60,10 +60,10 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    long current=old==null?0:old.revision();
    String payload=change.deleted?null:change.value==null?null:change.value.toString();
    if(!change.deleted && (payload==null || payload.length()>10000000))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"항목 내용이 올바르지 않습니다.");
-   if(change.kind.equals("list:notes")){
-    try{var previous=old==null||old.payload()==null?json.nullNode():json.readTree(old.payload()).path("project");var next=change.value==null?json.nullNode():change.value.path("project");String document=next.path("id").asText(previous.path("id").asText(""));
-     if(!document.isEmpty()){var lease=documentLocks.active(id,WeaverAuthService.hash(document));String token=request.documentLeases==null?null:request.documentLeases.get(document);if(lease!=null && (!actor.equals(lease.get("userId")) || token==null || !WeaverAuthService.hash(token).equals(lease.get("clientHash"))))throw new ResponseStatusException(HttpStatus.LOCKED,"다른 편집 화면에서 사용 중인 문서입니다.");if(token!=null && lease==null)throw new ResponseStatusException(HttpStatus.LOCKED,"문서 편집 잠금이 만료되었습니다. 다시 편집 권한을 받아주세요.");}
-    }catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new ResponseStatusException(HttpStatus.BAD_REQUEST);}
+   String resource=editResource(change.kind,change.id,change.value,old==null?null:old.payload());
+   if(resource!=null){var lease=documentLocks.active(id,WeaverAuthService.hash(resource));String token=request.documentLeases==null?null:request.documentLeases.get(resource);
+    if(lease!=null && (!actor.equals(lease.get("userId")) || token==null || !WeaverAuthService.hash(token).equals(lease.get("clientHash"))))throw new ResponseStatusException(HttpStatus.LOCKED,"다른 편집 화면에서 사용 중입니다. 편집 잠금을 확인해주세요.");
+    if(token!=null && lease==null)throw new ResponseStatusException(HttpStatus.LOCKED,"편집 잠금이 만료되었습니다. 다시 편집 권한을 받아주세요.");
    }
    boolean identical=old!=null && old.deleted()==change.deleted && Objects.equals(old.payload(),payload);
    if(!identical && current!=change.baseRevision)throw new ResponseStatusException(HttpStatus.CONFLICT,"다른 기기에서 같은 항목을 수정했습니다. 로컬 수정은 보관됩니다.");
@@ -95,8 +95,27 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   String key=WeaverAuthService.hash(request.documentId),hash=WeaverAuthService.hash(request.leaseToken);
   if(request.release){documentLocks.release(id,key,actor,hash);return Map.of("released",true);}
   var existing=documentLocks.active(id,key);
-  if(existing!=null && (!actor.equals(existing.get("userId")) || !hash.equals(existing.get("clientHash"))))return Map.of("acquired",false,"holder",Objects.toString(existing.get("name"),"다른 사용자"));
+  if(request.renewOnly && existing==null)return Map.of("acquired",false);
+  if(!request.takeover && existing!=null && (!actor.equals(existing.get("userId")) || !hash.equals(existing.get("clientHash"))))return Map.of("acquired",false,"holder",Objects.toString(existing.get("name"),"다른 사용자"));
   documentLocks.renew(id,key,actor,hash);return Map.of("acquired",true,"expiresIn",120);
+ }
+ public String editResource(String kind,String itemId,JsonNode value,String previous){
+  try{
+   if("layout".equals(kind)){var path=json.readTree(itemId);if(!path.isArray() || path.size()<2)throw new IllegalArgumentException();return "blocks".equals(path.get(1).asText())?"canvas:boxes":"canvas:diagram";}
+   if("list:notes".equals(kind)){var before=previous==null?json.nullNode():json.readTree(previous);String id=value==null?"":value.path("project").path("id").asText("");if(id.isEmpty())id=before.path("project").path("id").asText("");return id.isEmpty()?null:id;}
+   return null;
+  }catch(Exception e){throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"편집 항목이 올바르지 않습니다.");}
+ }
+ @Transactional(readOnly=true) public Map<String,Object> status(String id,String actor,WeaverWorkspaceRequest request){
+  permissions.access(actor,id,false);
+  if(request.documentLeases==null || request.documentLeases.size()>32)throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+  var states=new HashMap<String,Object>();
+  for(var entry:request.documentLeases.entrySet()){
+   if(entry.getKey().length()>512 || entry.getValue()==null || !entry.getValue().matches("[a-f0-9]{64}"))throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+   var lease=documentLocks.active(id,WeaverAuthService.hash(entry.getKey()));
+   states.put(entry.getKey(),Map.of("acquired",lease!=null && actor.equals(lease.get("userId")) && WeaverAuthService.hash(entry.getValue()).equals(lease.get("clientHash")),"holder",lease==null?"":Objects.toString(lease.get("name"),"다른 사용자")));
+  }
+  Long revision=mapper.revision(id);return Map.of("revision",revision==null?0:revision,"leases",states);
  }
  private String legacyType(JsonNode workspace,String id){for(String group:List.of("elements","trash"))for(JsonNode record:workspace.path(group))for(JsonNode clip:record.path("recordings"))if(id.equals(clip.path("id").asText()))return "audio";return "image";}
  private void storeFile(String user,String id,String type,byte[] data){

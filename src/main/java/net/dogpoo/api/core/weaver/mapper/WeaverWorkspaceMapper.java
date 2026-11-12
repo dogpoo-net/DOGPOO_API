@@ -5,6 +5,7 @@ import net.dogpoo.api.core.weaver.model.WeaverMediaFile;
 @Mapper public interface WeaverWorkspaceMapper {
  @Insert("INSERT IGNORE INTO WEAVER_ACCOUNT_WORKSPACE(user_id) VALUES(#{id})") int ensure(String id);
  @Select("SELECT revision FROM WEAVER_ACCOUNT_WORKSPACE WHERE user_id=#{id} FOR UPDATE") long lock(String id);
+ @Select("SELECT revision FROM WEAVER_ACCOUNT_WORKSPACE WHERE user_id=#{id}") Long revision(String id);
  @Select("SELECT migrated FROM WEAVER_ACCOUNT_WORKSPACE WHERE user_id=#{id}") boolean migrated(String id);
  @Update("UPDATE WEAVER_ACCOUNT_WORKSPACE SET migrated=TRUE WHERE user_id=#{id}") void migratedDone(String id);
  @Update("UPDATE WEAVER_ACCOUNT_WORKSPACE SET revision=revision+1 WHERE user_id=#{id}") int advance(String id);
