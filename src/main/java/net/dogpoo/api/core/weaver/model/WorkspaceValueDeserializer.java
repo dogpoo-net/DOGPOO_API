@@ -11,6 +11,11 @@ public final class WorkspaceValueDeserializer extends ValueDeserializer<JsonNode
     private static final ObjectMapper STORAGE_JSON = new ObjectMapper();
 
     @Override
+    public JsonNode getNullValue(DeserializationContext context) {
+        return com.fasterxml.jackson.databind.node.NullNode.getInstance();
+    }
+
+    @Override
     public JsonNode deserialize(JsonParser parser, DeserializationContext context) {
         var value = context.readTree(parser);
         try {
