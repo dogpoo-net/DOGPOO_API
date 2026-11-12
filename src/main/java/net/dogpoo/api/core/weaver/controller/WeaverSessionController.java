@@ -70,6 +70,12 @@ public class WeaverSessionController {
   var account=kakao.resolve(kakaoGateway.verify(request.kakaoToken),null);
   var result=sessions.issue(account,"web",r.getHeader("X-Weaver-Proof"));cookie(r,response,(String)result.remove("cookieToken"),false);return result;
  }
+ @PostMapping("/native/google/link") public Map<String,String> nativeGoogleLink(@RequestBody WeaverSessionRequest request,@RequestHeader(value="Authorization",required=false) String bearer){
+  kakao.resolve(google.verify(request.idToken),(String)sessions.me(bearer).get("id"));return Map.of("message","Google 계정을 연결했습니다.");
+ }
+ @PostMapping("/web/google/link") public Map<String,String> webGoogleLink(@RequestBody WeaverSessionRequest request,HttpServletRequest r){
+  kakao.resolve(google.verify(request.idToken),(String)sessions.webResume(cookie(r),r.getHeader("X-Weaver-Proof")).get("id"));return Map.of("message","Google 계정을 연결했습니다.");
+ }
  @PostMapping("/native/kakao/link") public Map<String,String> nativeKakaoLink(@RequestBody WeaverSessionRequest request,@RequestHeader(value="Authorization",required=false) String bearer){
   String id=(String)sessions.me(bearer).get("id");kakao.resolve(kakaoGateway.verify(request.kakaoToken),id);return Map.of("message","카카오 계정을 연결했습니다.");
  }

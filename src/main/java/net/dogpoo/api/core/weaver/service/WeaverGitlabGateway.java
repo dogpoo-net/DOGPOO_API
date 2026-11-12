@@ -39,7 +39,7 @@ public class WeaverGitlabGateway {
   String id=profile.path("sub").asText();if(id.isBlank() || id.length()>128)throw denied();
   if(!profile.path("email_verified").asBoolean())throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,"GitLab 계정의 이메일 인증이 필요합니다.");
   String name=profile.path("name").asText();if(name.isBlank())name=profile.path("preferred_username").asText();
-  return new WeaverSocialIdentity("gitlab",id,WeaverAuthService.email(profile.path("email").asText()),WeaverAuthService.name(name));
+  return new WeaverSocialIdentity("gitlab",id,WeaverAuthService.email(profile.path("email").asText()),WeaverAuthService.name(name),profile.path("picture").asText(null));
  }
  private static ResponseStatusException denied(){return new ResponseStatusException(HttpStatus.UNAUTHORIZED,"GitLab 인증 정보를 확인하지 못했습니다. 다시 시도해주세요.");}
 }

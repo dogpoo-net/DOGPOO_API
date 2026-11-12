@@ -18,7 +18,7 @@ import net.dogpoo.api.core.weaver.model.WeaverSocialIdentity;
   if(!audience.equals(p.path("aud").asText()) || !("https://accounts.google.com".equals(p.path("iss").asText()) || "accounts.google.com".equals(p.path("iss").asText())) || p.path("exp").asLong()<=now || !p.path("email_verified").asBoolean())throw denied();
   String sub=p.path("sub").asText();if(sub.isBlank() || sub.length()>128)throw denied();
   String email=WeaverAuthService.email(p.path("email").asText());String name=p.path("name").asText();if(name.isBlank())name=email.split("@")[0];
-  return new WeaverSocialIdentity("google",sub,email,WeaverAuthService.name(name));
+  return new WeaverSocialIdentity("google",sub,email,WeaverAuthService.name(name),p.path("picture").asText(null));
  }
  private static ResponseStatusException denied(){return new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Google 인증 정보를 확인하지 못했습니다. 다시 로그인해주세요.");}
 }

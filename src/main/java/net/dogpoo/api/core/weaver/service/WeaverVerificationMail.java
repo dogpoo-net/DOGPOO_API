@@ -20,6 +20,7 @@ public class WeaverVerificationMail {
   deliver(email,"WEAVER 이메일 인증","WEAVER 회원가입을 완료하려면 아래 링크를 열고 이메일 인증을 눌러주세요.\n\n"+baseUrl+"#verify-email="+token+"\n\n링크는 30분 동안 한 번만 사용할 수 있습니다. 가입을 요청하지 않았다면 이 메일을 무시하세요.");
  }
  public void invite(String email,String token,String role){deliver(email,"WEAVER 워크스페이스 초대","워크스페이스에 "+(role.equals("editor")?"편집자":"읽기 전용 참여자")+"로 초대되었습니다. 초대받은 이메일 계정으로 로그인한 뒤 수락해주세요.\n\n"+baseUrl+"#invite="+token+"\n\n초대는 7일 동안 유효합니다.");}
+ public void password(String email,String code){deliver(email,"WEAVER 비밀번호 변경 인증","비밀번호 변경 인증코드: "+code+"\n\n10분 안에 프로필의 비밀번호 변경 화면에 입력해주세요. 코드는 한 번만 사용할 수 있습니다. 요청하지 않았다면 무시해주세요.");}
  private void deliver(String email,String subject,String body) {
   if(host.isBlank() || from.isBlank() || username.isBlank() || password.isBlank())
    throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"인증메일 설정을 확인해주세요.");

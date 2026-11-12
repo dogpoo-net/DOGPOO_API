@@ -13,6 +13,7 @@ import net.dogpoo.api.core.weaver.model.*;
 
 @Service
 public class WeaverAuthService {
+ @org.springframework.beans.factory.annotation.Autowired(required=false) private net.dogpoo.api.core.weaver.mapper.WeaverProfileMapper profiles;
  private final WeaverAuthMapper mapper;
  private final PasswordEncoder encoder;
  private final WeaverVerificationMail mail;
@@ -81,6 +82,7 @@ public class WeaverAuthService {
   boolean matched=encoder.matches(request.password,account==null?dummyHash:account.passwordHash());
   if(!matched || account==null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"이메일 또는 비밀번호를 확인해주세요.");
   if(account.verifiedAt()==null) throw new ResponseStatusException(HttpStatus.FORBIDDEN,"이메일 인증 후 로그인해주세요.");
+  if(profiles!=null){profiles.ensure(account.id());profiles.email(account.id(),true);}
   return account;
  }
  public Map<String,Object> me(String authorization) {

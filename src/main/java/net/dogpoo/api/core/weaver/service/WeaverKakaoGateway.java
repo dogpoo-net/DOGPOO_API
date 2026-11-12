@@ -30,7 +30,7 @@ public class WeaverKakaoGateway {
    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,"카카오 계정의 인증된 이메일 제공 동의가 필요합니다.");
   String email=WeaverAuthService.email(account.path("email").asText());
   String name=WeaverAuthService.name(account.path("profile").path("nickname").asText());
-  return new WeaverSocialIdentity("kakao",profile.path("id").asText(),email,name);
+  return new WeaverSocialIdentity("kakao",profile.path("id").asText(),email,name,account.path("profile").path("profile_image_url").asText(null));
  }
  private JsonNode get(String path,String token){
   try {
