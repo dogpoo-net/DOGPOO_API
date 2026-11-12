@@ -123,7 +123,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    return null;
   }catch(Exception e){throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"편집 항목이 올바르지 않습니다.");}
  }
- @Transactional(readOnly=true) public Map<String,Object> status(String id,String actor,WeaverWorkspaceRequest request){
+ @Transactional public Map<String,Object> status(String id,String actor,WeaverWorkspaceRequest request){
   boolean canEdit=!"viewer".equals(permissions.access(actor,id,false).role());
   if(request.documentLeases==null || request.documentLeases.size()>32)throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
   var states=new HashMap<String,Object>();
