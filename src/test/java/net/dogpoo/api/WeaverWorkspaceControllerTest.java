@@ -13,10 +13,10 @@ class WeaverWorkspaceControllerTest {
   var sessions=mock(WeaverSessionService.class);var data=mock(WeaverWorkspaceService.class);
   when(sessions.me("Bearer valid")).thenReturn(Map.of("id","account-a","email","a@example.com"));
   when(sessions.me(null)).thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-  when(data.read("account-a","a@example.com","account-a",0)).thenReturn(Map.of("changes",List.of(),"revision",0));
+  when(data.read("account-a","a@example.com","account-a",0)).thenReturn(Map.of("changes",List.of(new net.dogpoo.api.core.weaver.model.WeaverWorkspaceItem("list:notes","n","{}",false,1,"","account-a",null)),"revision",1));
   var controller=new WeaverWorkspaceController(sessions,data,"https://weaver.dogpoo.net");var sharing=mock(WeaverSharingService.class);when(sharing.access("account-a",null,false)).thenReturn(new WeaverSharingService.Access("account-a","a@example.com","owner"));org.springframework.test.util.ReflectionTestUtils.setField(controller,"sharing",sharing);var mvc=MockMvcBuilders.standaloneSetup(controller).build();
   mvc.perform(post("/weaver/api/auth/session/native/workspace/read").contentType("application/json").content("{}")) .andExpect(status().isUnauthorized());
-  mvc.perform(post("/weaver/api/auth/session/native/workspace/read").header("Authorization","Bearer valid").contentType("application/json").content("{}")) .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"));
+  mvc.perform(post("/weaver/api/auth/session/native/workspace/read").header("Authorization","Bearer valid").contentType("application/json").content("{}")) .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store")).andExpect(jsonPath("$.changes[0].authorId").value("account-a"));
   verify(data).read("account-a","a@example.com","account-a",0);
   mvc.perform(post("/weaver/api/auth/session/web/workspace/read").header("Origin","https://evil.example").contentType("application/json").content("{}")) .andExpect(status().isForbidden());
  }
