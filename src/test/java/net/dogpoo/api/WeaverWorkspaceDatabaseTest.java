@@ -45,7 +45,7 @@ class WeaverWorkspaceDatabaseTest {
   assertEquals(media.data,service.mediaRead(a,email(a),media).get("data"));
   trash.deleted=true;trash.baseRevision=2;trash.value=null;move.changes=List.of(trash);service.save(a,email(a),move,false);
   assertEquals(404,assertThrows(ResponseStatusException.class,()->service.mediaRead(a,email(a),media)).getStatusCode().value());
-  try(var files=java.nio.file.Files.list(java.nio.file.Path.of("/tmp/weaver-workspace-media-tests/image",a))){assertEquals(0,files.count());}
+  try(var files=java.nio.file.Files.list(java.nio.file.Path.of("/tmp/weaver-workspace-media-tests/contents/note/image",a))){assertEquals(0,files.count());}
  }
  @Test void unlockingAllowsAllEditorsAndLastFullResourceSaveWins()throws Exception{
   jdbc.update("INSERT INTO WEAVER_WORKSPACE_MEMBER(workspace_id,user_id,role) VALUES(?,?,'editor')",a,b);

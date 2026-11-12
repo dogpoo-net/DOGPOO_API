@@ -92,7 +92,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   if(candidates.isEmpty())return;
   for(String record:mapper.attachmentRecords(user))candidates.removeAll(attachmentIds(record));
   for(String id:candidates){String key=WeaverAuthService.hash(id);var media=mapper.media(user,key);if(media==null)continue;
-   Path file=resourceRoot.resolve(media.path()).normalize();if(!file.startsWith(resourceRoot.resolve(media.type()).resolve(user)))continue;
+   Path file=resourceRoot.resolve(media.path()).normalize();if(!file.startsWith(resourceRoot.resolve("contents/note").resolve(media.type()).resolve(user)))continue;
    mapper.removeMedia(user,key);
    org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization(){@Override public void afterCommit(){try{Files.deleteIfExists(file);}catch(java.io.IOException ignored){/* Metadata is revoked; a filesystem failure must not roll back a committed deletion. */}}});
   }
@@ -142,7 +142,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    var old=mapper.media(user,key);
    if(old!=null){if(!old.hash().equals(hash) || !old.type().equals(type))throw new ResponseStatusException(HttpStatus.CONFLICT,"첨부파일 식별자가 충돌했습니다.");return;}
    if(mapper.itemBytes(user)+mapper.mediaBytes(user)+history.bytes(user)+data.length>maxBytes)throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,"워크스페이스 저장 한도를 초과했습니다.");
-   Path directory=resourceRoot.resolve(type).resolve(user);Files.createDirectories(directory);
+   Path directory=resourceRoot.resolve("contents/note").resolve(type).resolve(user);Files.createDirectories(directory);
    Path file=directory.resolve(key+"-"+UUID.randomUUID()+".bin"),temp=Files.createTempFile(directory,".upload-",".tmp");
    try {Files.write(temp,data);Files.move(temp,file,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}finally{Files.deleteIfExists(temp);}
    org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization(){@Override public void afterCompletion(int status){if(status!=STATUS_COMMITTED)try{Files.deleteIfExists(file);}catch(java.io.IOException ignored){}}});
@@ -158,7 +158,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  @Transactional public Map<String,Object> mediaRead(String id,String email,WeaverWorkspaceRequest request){return mediaRead(id,email,id,request);}
  @Transactional public Map<String,Object> mediaRead(String id,String email,String actor,WeaverWorkspaceRequest request){
   lock(id,email);permissions.access(actor,id,false);if(request.mediaId==null)throw new ResponseStatusException(HttpStatus.BAD_REQUEST);var metadata=mapper.media(id,WeaverAuthService.hash(request.mediaId));if(metadata==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-  try {Path file=resourceRoot.resolve(metadata.path()).normalize();if(!file.startsWith(resourceRoot.resolve(metadata.type()).resolve(id)))throw new IllegalArgumentException();
+  try {Path file=resourceRoot.resolve(metadata.path()).normalize();if(!file.startsWith(resourceRoot.resolve("contents/note").resolve(metadata.type()).resolve(id)))throw new IllegalArgumentException();
    byte[] data=Files.readAllBytes(file);String hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(data));if(!hash.equals(metadata.hash()))throw new IllegalArgumentException();
    return Map.of("data",Base64.getEncoder().encodeToString(data),"mediaType",metadata.type());
   }catch(Exception e){throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"첨부파일을 읽지 못했습니다.");}

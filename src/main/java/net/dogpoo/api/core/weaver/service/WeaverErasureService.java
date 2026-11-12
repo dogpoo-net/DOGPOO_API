@@ -9,7 +9,7 @@ import net.dogpoo.api.core.weaver.mapper.WeaverWithdrawalMapper;
  public synchronized void drain(){
   for(var job:mapper.pending())try{
    String id=job.get("id");if(id==null || !id.matches("[a-f0-9-]{36}"))continue;
-   if("workspace".equals(job.get("kind"))){remove(root.resolve("image").resolve(id));remove(root.resolve("audio").resolve(id));}
+   if("workspace".equals(job.get("kind"))){for(String folder:List.of("contents/note/image","contents/note/video","contents/note/audio","contents/doc/image"))remove(root.resolve(folder).resolve(id));}
    else if("profile".equals(job.get("kind")))remove(root.resolve("profile/images").resolve(id));else continue;
    mapper.complete(id,job.get("kind"));
   }catch(IOException e){org.slf4j.LoggerFactory.getLogger(getClass()).warn("WEAVER file erasure will be retried");}
