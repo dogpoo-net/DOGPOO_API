@@ -27,12 +27,12 @@ public class WeaverSessionService {
  private ResponseStatusException denied(){return new ResponseStatusException(HttpStatus.UNAUTHORIZED,"로그인이 만료되었습니다. 다시 로그인해주세요.");}
  private String[] split(String value){if(value==null || !value.matches("[a-f0-9-]{36}\\.[A-Za-z0-9_-]{43}"))throw denied();return value.split("\\.",2);}
  private WeaverDeviceSession valid(WeaverDeviceSession s,String kind){
-  if(s==null || !kind.equals(s.kind()) || !now().isBefore(s.idleExpiresAt()) || !now().isBefore(s.absoluteExpiresAt()))throw denied();
+  if(s==null || !kind.equals(s.kind()) || !now().isBefore(s.idleExpiresAt()) || (s.absoluteExpiresAt()!=null && !now().isBefore(s.absoluteExpiresAt())))throw denied();
   return s;
  }
  private LocalDateTime idle(WeaverDeviceSession s){
   LocalDateTime candidate="web".equals(s.kind())?now().plusHours(24):now().plusDays(90);
-  return candidate.isBefore(s.absoluteExpiresAt())?candidate:s.absoluteExpiresAt();
+  return s.absoluteExpiresAt()==null || candidate.isBefore(s.absoluteExpiresAt())?candidate:s.absoluteExpiresAt();
  }
  private Map<String,Object> identity(WeaverDeviceSession s){
   WeaverAccount a=mapper.account(s.userId());
@@ -48,7 +48,7 @@ public class WeaverSessionService {
   if("web".equals(kind) && (proof==null || !proof.matches("[A-Za-z0-9_-]{43}")))throw denied();
   LocalDateTime now=now();String id=UUID.randomUUID().toString(),token=secret();
   WeaverDeviceSession s=new WeaverDeviceSession(id,a.id(),kind,hash(token),null,"web".equals(kind)?hash(proof):null,
-    null,now,now,"web".equals(kind)?now.plusHours(24):now.plusDays(90),now.plusDays(365));
+    null,now,now,"web".equals(kind)?now.plusHours(24):now.plusDays(90),"native".equals(kind)?null:now.plusDays(365));
   mapper.insert(s);
   Map<String,Object> result=identity(s);
   if("native".equals(kind)){result.put("refreshToken",id+"."+token);issueAccess(s,result);}

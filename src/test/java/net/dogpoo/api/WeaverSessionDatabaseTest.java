@@ -38,10 +38,10 @@ class WeaverSessionDatabaseTest {
   advance(Duration.ofDays(30));var refreshed=sessions.refresh(refresh(login),"r".repeat(43));assertEquals(email,refreshed.get("email"));assertNotEquals(refresh(login),refresh(refreshed));
   advance(Duration.ofDays(90));assertThrows(ResponseStatusException.class,()->sessions.refresh(refresh(refreshed),"r".repeat(43)));
  }
- @Test void absoluteExpiryCannotBeExtendedByRegularActivity(){
+ @Test void nativeSessionRemainsValidBeyondOneYearWithRegularActivity(){
   var login=sessions.login(request,"native",null);
   for(int i=0;i<4;i++){advance(Duration.ofDays(80));login=sessions.refresh(refresh(login),"r".repeat(43));}
-  advance(Duration.ofDays(45));String token=refresh(login);assertThrows(ResponseStatusException.class,()->sessions.refresh(token,"r".repeat(43)));
+  advance(Duration.ofDays(80));String token=refresh(login);assertEquals(email,sessions.refresh(token,"r".repeat(43)).get("email"));
  }
  @Test void deviceLogoutLeavesOtherDeviceAndGlobalLogoutRevokesEverything(){
   var first=sessions.login(request,"native",null);var second=sessions.login(request,"native",null);

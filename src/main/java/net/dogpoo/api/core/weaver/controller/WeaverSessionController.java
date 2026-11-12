@@ -43,7 +43,7 @@ public class WeaverSessionController {
  }
  private void cookie(HttpServletRequest r,HttpServletResponse response,String value,boolean delete){
   var builder=ResponseCookie.from(cookieName(r),value).httpOnly(true).secure(true).sameSite("Strict").path("/");
-  if(delete)builder.maxAge(Duration.ZERO); // Otherwise a browser-session cookie, no Expires/Max-Age.
+  builder.maxAge(delete ? Duration.ZERO : Duration.ofHours(24));
   response.addHeader(HttpHeaders.SET_COOKIE,builder.build().toString());
  }
  private void credentials(WeaverAuthRequest request){WeaverAuthService.validateCredentials(request,false);limits.check("login:"+WeaverAuthService.email(request.email),5);}
@@ -100,10 +100,10 @@ public class WeaverSessionController {
    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"새 탭 정보가 올바르지 않습니다.");
   limits.check("attach:"+tab(r),10);
   var result=sessions.attachWeb(cookie(r),r.getHeader("X-Weaver-Proof"),request.proof);
-  response.addHeader(HttpHeaders.SET_COOKIE,ResponseCookie.from("__Host-weaver-"+request.tabId,(String)result.remove("cookieToken")).httpOnly(true).secure(true).sameSite("Strict").path("/").build().toString());
+  response.addHeader(HttpHeaders.SET_COOKIE,ResponseCookie.from("__Host-weaver-"+request.tabId,(String)result.remove("cookieToken")).httpOnly(true).secure(true).sameSite("Strict").path("/").maxAge(Duration.ofHours(24)).build().toString());
   return result;
  }
- @PostMapping("/web/refresh") public Map<String,Object> webRefresh(HttpServletRequest r){return sessions.webResume(cookie(r),r.getHeader("X-Weaver-Proof"));}
+ @PostMapping("/web/refresh") public Map<String,Object> webRefresh(HttpServletRequest r,HttpServletResponse response){var result=sessions.webResume(cookie(r),r.getHeader("X-Weaver-Proof"));cookie(r,response,cookie(r),false);return result;}
  @PostMapping("/web/logout") public Map<String,String> webLogout(HttpServletRequest r,HttpServletResponse response){return webEnd(r,response,false);}
  @PostMapping("/web/logout-all") public Map<String,String> webLogoutAll(HttpServletRequest r,HttpServletResponse response){return webEnd(r,response,true);}
  private Map<String,String> webEnd(HttpServletRequest r,HttpServletResponse response,boolean all){

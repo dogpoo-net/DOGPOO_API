@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 class WeaverSessionControllerTest {
- @Test void webCookieIsHttpOnlySecureSessionScopedAndRequiresOriginAndTabProof() throws Exception {
+ @Test void webCookiePersistsFor24HoursAndRequiresOriginAndProof() throws Exception {
   var service=mock(WeaverSessionService.class);
   when(service.login(any(),eq("web"),any())).thenAnswer(i->new HashMap<>(Map.of("id","id","email","a@example.com","expiresIn",1800,"cookieToken","private-cookie")));
   var mvc=MockMvcBuilders.standaloneSetup(new WeaverSessionController(service,new WeaverAuthRateLimit(),mock(WeaverKakaoGateway.class),mock(WeaverSocialAccountService.class),mock(WeaverOAuthService.class),"https://weaver.dogpoo.net")).build();
@@ -21,7 +21,7 @@ class WeaverSessionControllerTest {
     .andExpect(status().isOk()).andExpect(jsonPath("$.cookieToken").doesNotExist()).andExpect(jsonPath("$.refreshToken").doesNotExist()).andExpect(header().string("Cache-Control","no-store")).andReturn();
   String cookie=result.getResponse().getHeader("Set-Cookie");
   assertTrue(cookie.startsWith("__Host-weaver-"));assertTrue(cookie.contains("HttpOnly"));assertTrue(cookie.contains("Secure"));assertTrue(cookie.contains("SameSite=Strict"));
-  assertFalse(cookie.contains("Max-Age"));assertFalse(cookie.contains("Expires"));assertFalse(cookie.contains("Domain="));
+  assertTrue(cookie.contains("Max-Age=86400"));assertFalse(cookie.contains("Domain="));
  }
  @Test void invitationTabReceivesIndependentCookieOnlyAfterSourceAuthentication() throws Exception {
   var service=mock(WeaverSessionService.class);
@@ -36,7 +36,7 @@ class WeaverSessionControllerTest {
    .andExpect(status().isOk()).andExpect(jsonPath("$.cookieToken").doesNotExist()).andReturn();
   String cookie=result.getResponse().getHeader("Set-Cookie");
   assertTrue(cookie.startsWith("__Host-weaver-"+target+"=new-cookie"));
-  assertTrue(cookie.contains("HttpOnly"));assertTrue(cookie.contains("Secure"));assertTrue(cookie.contains("SameSite=Strict"));assertFalse(cookie.contains("Max-Age"));
+  assertTrue(cookie.contains("HttpOnly"));assertTrue(cookie.contains("Secure"));assertTrue(cookie.contains("SameSite=Strict"));assertTrue(cookie.contains("Max-Age=86400"));
   verify(service).attachWeb("source-cookie",proof,targetProof);
   mvc.perform(post(route).header("Origin","https://weaver.dogpoo.net").header("X-Weaver-Tab",source).header("X-Weaver-Proof",proof).contentType("application/json").content(body.replace(target,source))).andExpect(status().isBadRequest());
   when(service.attachWeb(null,proof,targetProof)).thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED));
