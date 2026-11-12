@@ -37,4 +37,14 @@ class WeaverWorkspaceDatabaseTest {
   assertThrows(ResponseStatusException.class,()->service.mediaRead(b,email(b),r));
   r.data=Base64.getEncoder().encodeToString(new byte[]{4});assertThrows(ResponseStatusException.class,()->service.mediaWrite(a,email(a),r));
  }
+ @Test void movingToTrashKeepsMediaButPermanentDeletionRemovesUnreferencedFiles()throws Exception{
+  var media=new WeaverWorkspaceRequest();media.mediaId="cleanup-photo";media.mediaType="image";media.data=Base64.getEncoder().encodeToString(new byte[]{1,2,3});service.mediaWrite(a,email(a),media);
+  var record=request("one","with photo",0);((com.fasterxml.jackson.databind.node.ObjectNode)record.changes.get(0).value).putArray("photos").addObject().put("id",media.mediaId).put("name","photo.jpg");service.save(a,email(a),record,false);
+  var move=new WeaverWorkspaceRequest();var deleted=new WeaverWorkspaceRequest.Change();deleted.kind="list:elements";deleted.id="one";deleted.deleted=true;deleted.baseRevision=1;
+  var trash=new WeaverWorkspaceRequest.Change();trash.kind="list:trash";trash.id="one";trash.value=record.changes.get(0).value;move.changes=List.of(deleted,trash);service.save(a,email(a),move,false);
+  assertEquals(media.data,service.mediaRead(a,email(a),media).get("data"));
+  trash.deleted=true;trash.baseRevision=2;trash.value=null;move.changes=List.of(trash);service.save(a,email(a),move,false);
+  assertEquals(404,assertThrows(ResponseStatusException.class,()->service.mediaRead(a,email(a),media)).getStatusCode().value());
+  try(var files=java.nio.file.Files.list(java.nio.file.Path.of("/tmp/weaver-workspace-media-tests/image",a))){assertEquals(0,files.count());}
+ }
 }

@@ -19,4 +19,6 @@ import net.dogpoo.api.core.weaver.model.WeaverMediaFile;
  @Select("SELECT COALESCE(SUM(OCTET_LENGTH(payload)),0) FROM WEAVER_WORKSPACE_ITEM WHERE user_id=#{id} AND deleted=FALSE") long itemBytes(String id);
  @Select("SELECT COALESCE(SUM(byte_size),0) FROM WEAVER_WORKSPACE_MEDIA WHERE user_id=#{id}") long mediaBytes(String id);
  @Insert("INSERT INTO WEAVER_ITEM_METADATA(workspace_id,item_key,created_by,updated_by,updated_at) VALUES(#{workspace},#{key},#{creator},#{actor},UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE updated_by=VALUES(updated_by),updated_at=VALUES(updated_at)") void touch(@Param("workspace") String workspace,@Param("key") String key,@Param("creator") String creator,@Param("actor") String actor);
+ @Select("SELECT payload FROM WEAVER_WORKSPACE_ITEM WHERE user_id=#{id} AND deleted=FALSE AND kind IN ('list:elements','list:trash')") List<String> attachmentRecords(String id);
+ @Delete("DELETE FROM WEAVER_WORKSPACE_MEDIA WHERE user_id=#{id} AND media_key=#{key}") int removeMedia(@Param("id") String id,@Param("key") String key);
 }

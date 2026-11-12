@@ -52,9 +52,12 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    String owner=mapper.claimed(request.guestId);
    if(owner!=null){if(!owner.equals(id) || !request.sourceHash.equals(mapper.sourceHash(request.guestId)))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 귀속되었거나 내용이 다른 비회원 자료입니다.");return result(id,0,revision);}
   }
+  var removedMedia=new HashSet<String>();
   var seen=new HashSet<String>();
   for(var change:request.changes){valid(change.kind,change.id);String key=key(change.kind,change.id);if(!seen.add(key))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"중복 항목입니다.");
-   var old=mapper.item(id,key);long current=old==null?0:old.revision();
+   var old=mapper.item(id,key);
+   if(change.deleted && old!=null && !old.deleted() && Set.of("list:elements","list:trash").contains(change.kind))removedMedia.addAll(attachmentIds(old.payload()));
+   long current=old==null?0:old.revision();
    String payload=change.deleted?null:change.value==null?null:change.value.toString();
    if(!change.deleted && (payload==null || payload.length()>10000000))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"항목 내용이 올바르지 않습니다.");
    if(change.kind.equals("list:notes")){
@@ -68,8 +71,23 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   if(importing)mapper.claim(request.guestId,id,request.sourceHash);
   if(!request.changes.isEmpty()){mapper.advance(id);revision++;}
   for(var c:request.changes){var old=mapper.item(id,key(c.kind,c.id));String after=c.deleted?null:c.value.toString();history.record(id,actor,c.kind,c.id,old==null||old.deleted()?null:old.payload(),after,importing?"import":"edit");mapper.put(id,key(c.kind,c.id),c.kind,c.id,after,c.deleted,revision);if((c.kind.equals("list:notes")||c.kind.equals("list:elements")) && (old==null || !Objects.equals(old.payload(),after)))mapper.touch(id,key(c.kind,c.id),old==null?actor:null,actor);}
+  removeUnreferencedMedia(id,removedMedia);
   quota(id);if(importing)return result(id,0,revision);
   return Map.of("revision",revision,"changes",request.changes.stream().map(c->mapper.item(id,key(c.kind,c.id))).toList());
+ }
+ private Set<String> attachmentIds(String payload){
+  var ids=new HashSet<String>();if(payload==null)return ids;
+  try{var record=json.readTree(payload);for(String field:List.of("photos","recordings"))for(var item:record.path(field)){String id=item.path("id").asText("");if(!id.isEmpty())ids.add(id);}}
+  catch(Exception ignored){/* Invalid legacy data must not authorize file deletion. */}return ids;
+ }
+ private void removeUnreferencedMedia(String user,Set<String> candidates){
+  if(candidates.isEmpty())return;
+  for(String record:mapper.attachmentRecords(user))candidates.removeAll(attachmentIds(record));
+  for(String id:candidates){String key=WeaverAuthService.hash(id);var media=mapper.media(user,key);if(media==null)continue;
+   Path file=resourceRoot.resolve(media.path()).normalize();if(!file.startsWith(resourceRoot.resolve(media.type()).resolve(user)))continue;
+   mapper.removeMedia(user,key);
+   org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization(){@Override public void afterCommit(){try{Files.deleteIfExists(file);}catch(java.io.IOException ignored){/* Metadata is revoked; a filesystem failure must not roll back a committed deletion. */}}});
+  }
  }
  @Transactional public Map<String,Object> documentLease(String id,String email,String actor,WeaverWorkspaceRequest request){
   lock(id,email);permissions.access(actor,id,true);
@@ -89,8 +107,9 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    if(old!=null){if(!old.hash().equals(hash) || !old.type().equals(type))throw new ResponseStatusException(HttpStatus.CONFLICT,"첨부파일 식별자가 충돌했습니다.");return;}
    if(mapper.itemBytes(user)+mapper.mediaBytes(user)+history.bytes(user)+data.length>maxBytes)throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,"워크스페이스 저장 한도를 초과했습니다.");
    Path directory=resourceRoot.resolve(type).resolve(user);Files.createDirectories(directory);
-   Path file=directory.resolve(key+".bin"),temp=Files.createTempFile(directory,".upload-",".tmp");
+   Path file=directory.resolve(key+"-"+UUID.randomUUID()+".bin"),temp=Files.createTempFile(directory,".upload-",".tmp");
    try {Files.write(temp,data);Files.move(temp,file,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}finally{Files.deleteIfExists(temp);}
+   org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization(){@Override public void afterCompletion(int status){if(status!=STATUS_COMMITTED)try{Files.deleteIfExists(file);}catch(java.io.IOException ignored){}}});
    mapper.mediaPut(user,key,id,resourceRoot.relativize(file).toString(),type,data.length,hash);
   }catch(ResponseStatusException e){throw e;}catch(Exception e){throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"첨부파일을 저장하지 못했습니다.");}
  }
