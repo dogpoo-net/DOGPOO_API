@@ -52,3 +52,11 @@ identity/time, returned alongside item payloads. Existing clients may ignore the
 optional response fields. Existing content without creator metadata stays unknown;
 editing such content never invents a creator. Another editor's save updates the
 modification time while preserving the original creator.
+
+Document revisions saved while the server document lock has `shared_editing=TRUE`
+now store `action=unlocked_edit`. This is decided by the server under the workspace
+transaction lock, not by a client assertion. It applies to every editor saving
+that unlocked document, and does not revoke the original editor's access.
+Existing revisions retain their original actions; no historical unlock status is
+inferred. The existing history `action` column accommodates this value, so no
+schema migration is required.

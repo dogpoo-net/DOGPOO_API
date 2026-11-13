@@ -78,7 +78,12 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   }
   if(importing)mapper.claim(request.guestId,id,request.sourceHash);
   if(!request.changes.isEmpty()){mapper.advance(id);revision++;}
-  for(var c:request.changes){var old=mapper.item(id,key(c.kind,c.id));String after=c.deleted?null:c.value.toString();history.record(id,actor,c.kind,c.id,old==null||old.deleted()?null:old.payload(),after,importing?"import":"edit");mapper.put(id,key(c.kind,c.id),c.kind,c.id,after,c.deleted,revision);if((c.kind.equals("list:notes")||c.kind.equals("list:elements")) && (old==null || !Objects.equals(old.payload(),after)))mapper.touch(id,key(c.kind,c.id),old==null?actor:null,actor);}
+  for(var c:request.changes){var old=mapper.item(id,key(c.kind,c.id));String after=c.deleted?null:c.value.toString();String action=importing?"import":"edit";
+   if(!importing && !c.deleted && "list:notes".equals(c.kind)){
+    String resource=editResource(c.kind,c.id,c.value,old==null?null:old.payload());
+    if(resource!=null && sharedEditing(documentLocks.active(id,WeaverAuthService.hash(resource))))action="unlocked_edit";
+   }
+   history.record(id,actor,c.kind,c.id,old==null||old.deleted()?null:old.payload(),after,action);mapper.put(id,key(c.kind,c.id),c.kind,c.id,after,c.deleted,revision);if((c.kind.equals("list:notes")||c.kind.equals("list:elements")) && (old==null || !Objects.equals(old.payload(),after)))mapper.touch(id,key(c.kind,c.id),old==null?actor:null,actor);}
   removeUnreferencedMedia(id,removedMedia);
   quota(id);if(importing)return result(id,0,revision);
   return Map.of("revision",revision,"changes",request.changes.stream().map(c->mapper.item(id,key(c.kind,c.id))).toList());
