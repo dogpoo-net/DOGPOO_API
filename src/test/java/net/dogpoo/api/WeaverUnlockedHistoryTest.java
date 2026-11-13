@@ -25,12 +25,14 @@ class WeaverUnlockedHistoryTest {
    if(shared)when(locks.active(eq("workspace"),anyString())).thenReturn(Map.of("sharedEditing",true));
    var change=new WeaverWorkspaceRequest.Change();change.kind="list:notes";change.id="note";change.baseRevision=1;
    change.value=new ObjectMapper().readTree("{\"project\":{\"id\":\"doc\",\"document\":\"새 문장\"}}");
-   var request=new WeaverWorkspaceRequest();request.changes=List.of(change);request.resourceId="doc";request.documentLeases=Map.of("doc",token);
+   var request=new WeaverWorkspaceRequest();request.changes=List.of(change);request.resourceId="doc";request.releaseAfterSave=true;request.documentLeases=Map.of("doc",token);
    service.save("workspace","test@example.invalid","author",request,false);
    @SuppressWarnings("unchecked") var captured=org.mockito.ArgumentCaptor.forClass(Map.class);verify(history).insert(captured.capture());
    assertEquals(shared?"unlocked_edit":"edit",captured.getValue().get("action"));
    verify(locks).release("workspace",hash("doc"),"author",hash(token));
    assertEquals("이전",captured.getValue().get("before"));assertEquals("새 문장",captured.getValue().get("after"));
+   clearInvocations(locks);request.releaseAfterSave=false;service.save("workspace","test@example.invalid","author",request,false);
+   verify(locks,never()).release(anyString(),anyString(),anyString(),anyString());
   }
  }
 }

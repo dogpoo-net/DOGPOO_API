@@ -84,7 +84,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
     if(resource!=null && sharedEditing(documentLocks.active(id,WeaverAuthService.hash(resource))))action="unlocked_edit";
    }
    history.record(id,actor,c.kind,c.id,old==null||old.deleted()?null:old.payload(),after,action);mapper.put(id,key(c.kind,c.id),c.kind,c.id,after,c.deleted,revision);if((c.kind.equals("list:notes")||c.kind.equals("list:elements")) && (old==null || !Objects.equals(old.payload(),after)))mapper.touch(id,key(c.kind,c.id),old==null?actor:null,actor);}
-  if(request.resourceId!=null && !request.resourceId.startsWith("canvas:")){
+  if(request.releaseAfterSave && request.resourceId!=null && !request.resourceId.startsWith("canvas:")){
    String token=request.documentLeases==null?null:request.documentLeases.get(request.resourceId);
    if(token!=null)documentLocks.release(id,WeaverAuthService.hash(request.resourceId),actor,WeaverAuthService.hash(token));
   }

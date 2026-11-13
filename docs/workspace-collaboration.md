@@ -70,3 +70,7 @@ existing lifecycle. Status responses distinguish `available`, `acquired`, and
 A forced unlock retains the established shared-editing policy: all clients may
 continue editing and saving, and the last save wins. It does not revoke another
 client's draft or switch the document back to exclusive editing.
+
+New clients send `releaseAfterSave=true` on document resource saves. Older clients
+that omit this field retain their lease until their existing release/expiry flow,
+so deploying the API does not unexpectedly revoke their editing session.
