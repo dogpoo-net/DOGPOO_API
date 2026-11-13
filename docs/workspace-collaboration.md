@@ -60,3 +60,13 @@ that unlocked document, and does not revoke the original editor's access.
 Existing revisions retain their original actions; no historical unlock status is
 inferred. The existing history `action` column accommodates this value, so no
 schema migration is required.
+
+Document editors can observe a lease with `observeOnly=true` without acquiring
+one. The first edit makes an ordinary acquire request (not `renewOnly`). A
+successful resource save releases that client's exclusive document lease within
+the save transaction; a failed transaction retains it. Canvas leases retain their
+existing lifecycle. Status responses distinguish `available`, `acquired`, and
+`shared`, allowing idle editors to become writable on the next 3-second poll.
+A forced unlock retains the established shared-editing policy: all clients may
+continue editing and saving, and the last save wins. It does not revoke another
+client's draft or switch the document back to exclusive editing.

@@ -84,6 +84,10 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
     if(resource!=null && sharedEditing(documentLocks.active(id,WeaverAuthService.hash(resource))))action="unlocked_edit";
    }
    history.record(id,actor,c.kind,c.id,old==null||old.deleted()?null:old.payload(),after,action);mapper.put(id,key(c.kind,c.id),c.kind,c.id,after,c.deleted,revision);if((c.kind.equals("list:notes")||c.kind.equals("list:elements")) && (old==null || !Objects.equals(old.payload(),after)))mapper.touch(id,key(c.kind,c.id),old==null?actor:null,actor);}
+  if(request.resourceId!=null && !request.resourceId.startsWith("canvas:")){
+   String token=request.documentLeases==null?null:request.documentLeases.get(request.resourceId);
+   if(token!=null)documentLocks.release(id,WeaverAuthService.hash(request.resourceId),actor,WeaverAuthService.hash(token));
+  }
   removeUnreferencedMedia(id,removedMedia);
   quota(id);if(importing)return result(id,0,revision);
   return Map.of("revision",revision,"changes",request.changes.stream().map(c->mapper.item(id,key(c.kind,c.id))).toList());
@@ -110,7 +114,12 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   var existing=documentLocks.active(id,key);
   if(request.takeover){documentLocks.openEditing(id,key,actor,hash);return Map.of("acquired",true,"shared",true);}
   if(sharedEditing(existing))return Map.of("acquired",true,"shared",true);
-  if(request.renewOnly && existing==null)return Map.of("acquired",false);
+  if(request.observeOnly){
+   if(existing==null)return Map.of("acquired",false,"available",true);
+   boolean own=actor.equals(existing.get("userId")) && hash.equals(existing.get("clientHash"));
+   return Map.of("acquired",own,"available",false,"holder",Objects.toString(existing.get("name"),"다른 사용자"));
+  }
+  if(request.renewOnly && existing==null)return Map.of("acquired",false,"available",true);
   if(!request.takeover && existing!=null && (!actor.equals(existing.get("userId")) || !hash.equals(existing.get("clientHash"))))return Map.of("acquired",false,"holder",Objects.toString(existing.get("name"),"다른 사용자"));
   documentLocks.renew(id,key,actor,hash);return Map.of("acquired",true,"expiresIn",120);
  }
@@ -135,7 +144,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   for(var entry:request.documentLeases.entrySet()){
    if(entry.getKey().length()>512 || entry.getValue()==null || !entry.getValue().matches("[a-f0-9]{64}"))throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
    var lease=documentLocks.active(id,WeaverAuthService.hash(entry.getKey()));
-   states.put(entry.getKey(),Map.of("acquired",canEdit && (sharedEditing(lease) || (lease!=null && actor.equals(lease.get("userId")) && WeaverAuthService.hash(entry.getValue()).equals(lease.get("clientHash")))),"holder",lease==null?"":Objects.toString(lease.get("name"),"다른 사용자")));
+   states.put(entry.getKey(),Map.of("acquired",canEdit && (sharedEditing(lease) || (lease!=null && actor.equals(lease.get("userId")) && WeaverAuthService.hash(entry.getValue()).equals(lease.get("clientHash")))),"available",canEdit && lease==null,"shared",sharedEditing(lease),"holder",lease==null?"":Objects.toString(lease.get("name"),"다른 사용자")));
   }
   Long revision=mapper.revision(id);return Map.of("revision",revision==null?0:revision,"leases",states);
  }
