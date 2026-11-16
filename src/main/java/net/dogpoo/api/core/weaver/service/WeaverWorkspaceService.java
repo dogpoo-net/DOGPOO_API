@@ -67,7 +67,11 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   var seen=new HashSet<String>();
   for(var change:request.changes){valid(change.kind,change.id);String key=key(change.kind,change.id);if(!seen.add(key))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"중복 항목입니다.");
    var old=mapper.item(id,key);
-   if(change.deleted && old!=null && !old.deleted() && Set.of("list:elements","list:trash").contains(change.kind))removedMedia.addAll(attachmentIds(old.payload()));
+   if(old!=null && !old.deleted() && Set.of("list:elements","list:trash").contains(change.kind)){
+    var removed=attachmentIds(old.payload());
+    if(!change.deleted && change.value!=null)removed.removeAll(attachmentIds(change.value.toString()));
+    removedMedia.addAll(removed);
+   }
    long current=old==null?0:old.revision();
    String payload=change.deleted?null:change.value==null?null:change.value.toString();
    if(!change.deleted && (payload==null || payload.length()>10000000))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"항목 내용이 올바르지 않습니다.");
