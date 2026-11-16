@@ -9,6 +9,7 @@ import net.dogpoo.api.core.weaver.model.*;
 @Service public class WeaverCommentService {
  private final WeaverCommentMapper comments;private final WeaverSharingService sharing;private final WeaverSessionMapper accounts;
  public WeaverCommentService(WeaverCommentMapper comments,WeaverSharingService sharing,WeaverSessionMapper accounts){this.comments=comments;this.sharing=sharing;this.accounts=accounts;}
+ public Map<String,Long> counts(String workspace){var result=new HashMap<String,Long>();for(var row:comments.counts(workspace))result.put((String)row.get("memoId"),((Number)row.get("total")).longValue());return result;}
  @Transactional public Map<String,Object> handle(String actor,WeaverCommentRequest r,boolean write){
   var target=sharing.access(actor,r.workspaceId,write);
   if(r.memoId==null || r.memoId.isBlank() || r.memoId.length()>512 || r.beforeId<1)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"메모 정보가 올바르지 않습니다.");
@@ -21,6 +22,6 @@ import net.dogpoo.api.core.weaver.model.*;
    var stored=comments.submitted(actor,r.requestId);
    if(!target.id().equals(stored.get("workspace")) || !r.memoId.equals(stored.get("memo")) || !content.equals(stored.get("content")))throw new ResponseStatusException(HttpStatus.CONFLICT,"댓글 요청이 변경되었습니다. 다시 시도해주세요.");
   }
-  return Map.of("comments",comments.list(target.id(),r.memoId,write?Long.MAX_VALUE:r.beforeId));
+  return Map.of("comments",comments.list(target.id(),r.memoId,write?Long.MAX_VALUE:r.beforeId),"commentCount",comments.count(target.id(),r.memoId));
  }
 }
