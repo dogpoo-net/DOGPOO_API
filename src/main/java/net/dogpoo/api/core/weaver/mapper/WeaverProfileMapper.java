@@ -3,6 +3,9 @@ import org.apache.ibatis.annotations.*;
 import net.dogpoo.api.core.weaver.model.WeaverProfile;
 import java.util.List;
 @Mapper public interface WeaverProfileMapper {
+ @Select("SELECT s.avatar_url FROM WEAVER_SOCIAL_ACCOUNT s JOIN WEAVER_USER_ACCOUNT a ON a.id=s.user_id WHERE s.user_id=#{id} ORDER BY CASE WHEN s.provider=a.signup_provider THEN 0 ELSE 1 END,s.created_at,s.provider LIMIT 1") String originalSocialAvatar(String id);
+ @Update("UPDATE WEAVER_ACCOUNT_PROFILE SET avatar_path=NULL,avatar_url=#{url},default_selected=FALSE WHERE user_id=#{id}") int selectSocialAvatar(@Param("id") String id,@Param("url") String url);
+
  @Update("UPDATE WEAVER_ACCOUNT_PROFILE SET avatar_path=NULL,avatar_url=NULL,default_face=#{face},default_selected=TRUE WHERE user_id=#{id}") int defaultPhoto(@Param("id") String id,@Param("face") int face);
  @Select("SELECT signup_provider FROM WEAVER_USER_ACCOUNT WHERE id=#{id}") String signupProvider(String id);
 

@@ -3,6 +3,7 @@ import org.apache.ibatis.annotations.*;
 import net.dogpoo.api.core.weaver.model.WeaverAccount;
 @Mapper
 public interface WeaverSocialMapper {
+ @Update("UPDATE WEAVER_SOCIAL_ACCOUNT SET avatar_url=#{url} WHERE provider=#{provider} AND subject=#{subject} AND user_id=#{id}") int avatar(@Param("id") String id,@Param("provider") String provider,@Param("subject") String subject,@Param("url") String url);
  @Update("UPDATE WEAVER_SOCIAL_ACCOUNT SET login_email=#{email} WHERE provider=#{provider} AND subject=#{subject}")
  int email(@Param("provider") String provider,@Param("subject") String subject,@Param("email") String email);
  @Delete("DELETE FROM WEAVER_SOCIAL_ACCOUNT WHERE user_id=#{id} AND provider=#{provider}")

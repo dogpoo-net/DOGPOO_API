@@ -33,7 +33,7 @@ import net.dogpoo.api.core.weaver.model.*;
  private Path file(String id,String path){Path p=root.resolve(path).normalize();if(!p.getParent().equals(root.resolve(id)))throw new IllegalStateException("Invalid profile path");return p;}
  public Map<String,Object> read(String id){
   var a=sessions.account(id);if(a==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-  profiles.ensure(id);var p=profiles.get(id);var result=new HashMap<String,Object>();result.put("name",WeaverAuthService.socialName(a.displayName(),a.email()));result.put("email",a.email());result.put("providers",profiles.providers(id));String initial=profiles.signupProvider(id);result.put("signupProvider",initial==null?"unknown":initial);result.put("defaultFace",p==null?0:p.defaultFace());result.put("emailEnabled",p==null || p.emailEnabled());
+  profiles.ensure(id);var p=profiles.get(id);var result=new HashMap<String,Object>();result.put("name",WeaverAuthService.socialName(a.displayName(),a.email()));result.put("email",a.email());result.put("providers",profiles.providers(id));result.put("socialPhotoAvailable",safeAvatar(profiles.originalSocialAvatar(id))!=null);String initial=profiles.signupProvider(id);result.put("signupProvider",initial==null?"unknown":initial);result.put("defaultFace",p==null?0:p.defaultFace());result.put("emailEnabled",p==null || p.emailEnabled());
   if(p!=null){if(p.avatarPath()!=null){try{result.put("image",Base64.getEncoder().encodeToString(Files.readAllBytes(file(id,p.avatarPath()))));}catch(IOException e){/* Missing image uses the client's bundled fallback. */}}else if(safeAvatar(p.avatarUrl())!=null)result.put("avatarUrl",safeAvatar(p.avatarUrl()));}
   return result;
  }
@@ -42,6 +42,16 @@ import net.dogpoo.api.core.weaver.model.*;
   profiles.ensure(id);var previous=profiles.lock(id);
   int face=(Math.floorMod(previous.defaultFace(),6)+1+new SecureRandom().nextInt(5))%6;
   profiles.defaultPhoto(id,face);
+  if(previous.avatarPath()!=null){
+   Path old=file(id,previous.avatarPath());
+   TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){@Override public void afterCommit(){try{Files.deleteIfExists(old);}catch(IOException ignored){}}});
+  }
+ }
+ @Transactional public void socialPhoto(String id){
+  profiles.ensure(id);var previous=profiles.lock(id);
+  String url=safeAvatar(profiles.originalSocialAvatar(id));
+  if(url==null)throw bad("적용할 소셜 사진이 없습니다. 해당 소셜 계정으로 다시 로그인해주세요.");
+  profiles.selectSocialAvatar(id,url);
   if(previous.avatarPath()!=null){
    Path old=file(id,previous.avatarPath());
    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){@Override public void afterCommit(){try{Files.deleteIfExists(old);}catch(IOException ignored){}}});

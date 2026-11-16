@@ -36,8 +36,8 @@ public class WeaverSocialAccountService {
   // A social-only account has an unknowable password; no provider token is stored.
   accounts.insertAccount(id,profile.email(),encoder.encode(UUID.randomUUID()+UUID.randomUUID().toString()),profile.name());
   accounts.signupProvider(id,profile.provider());
-  profiles.ensure(id);profiles.email(id,false);avatar(id,profile);
-  social.verified(id);social.link(profile.provider(),profile.subject(),id);social.email(profile.provider(),profile.subject(),email);return sessions.account(id);
+  profiles.ensure(id);profiles.email(id,false);
+  social.verified(id);social.link(profile.provider(),profile.subject(),id);social.email(profile.provider(),profile.subject(),email);avatar(id,profile);return sessions.account(id);
  }
  private void checkEmail(String email,String id){
   if(accounts.emailUsed(email,id)>0)throw new ResponseStatusException(HttpStatus.CONFLICT,"다른 계정에서 사용 중인 이메일입니다. 해당 계정으로 로그인한 뒤 연결해주세요.");
@@ -53,6 +53,6 @@ public class WeaverSocialAccountService {
  private void avatar(String id,WeaverSocialIdentity profile){
   profiles.ensure(id);
   String url=WeaverProfileService.safeAvatar(profile.avatarUrl());
-  if(url!=null)profiles.socialAvatar(id,url);
+  if(url!=null){social.avatar(id,profile.provider(),profile.subject(),url);profiles.socialAvatar(id,url);}
  }
 }
