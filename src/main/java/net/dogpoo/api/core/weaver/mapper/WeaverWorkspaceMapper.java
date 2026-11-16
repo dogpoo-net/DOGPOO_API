@@ -3,6 +3,9 @@ import org.apache.ibatis.annotations.*;import java.util.*;
 import net.dogpoo.api.core.weaver.model.WeaverWorkspaceItem;
 import net.dogpoo.api.core.weaver.model.WeaverMediaFile;
 @Mapper public interface WeaverWorkspaceMapper {
+ @Select("SELECT request_hash FROM WEAVER_CANVAS_OPERATION_RECEIPT WHERE workspace_id=#{workspace} AND operation_id=#{operation}") String canvasReceipt(@Param("workspace") String workspace,@Param("operation") String operation);
+ @Insert("INSERT INTO WEAVER_CANVAS_OPERATION_RECEIPT(workspace_id,operation_id,request_hash) VALUES(#{workspace},#{operation},#{hash})") void canvasReceiptPut(@Param("workspace") String workspace,@Param("operation") String operation,@Param("hash") String hash);
+
  @Insert("INSERT IGNORE INTO WEAVER_ACCOUNT_WORKSPACE(user_id,owner_id) SELECT id,id FROM WEAVER_USER_ACCOUNT WHERE id=#{id}") int ensure(String id);
  @Select("SELECT id FROM WEAVER_USER_ACCOUNT WHERE id=#{id} FOR UPDATE") String lockAccountId(String id);
  @Select("SELECT owner_id FROM WEAVER_ACCOUNT_WORKSPACE WHERE user_id=#{id}") String owner(String id);

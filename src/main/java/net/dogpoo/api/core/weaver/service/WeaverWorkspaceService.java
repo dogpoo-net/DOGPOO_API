@@ -47,11 +47,21 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  @Transactional public Map<String,Object> save(String id,String email,String actor,WeaverWorkspaceRequest request,boolean importing){
   long revision=lock(id,email);permissions.access(actor,id,true);
   if(request.changes==null || request.changes.size()>20000)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"항목 수가 너무 많습니다.");
+  boolean canvas=request.canvasOperationId!=null;
+  String canvasHash=null;
+  if(canvas){
+   if(importing || request.resourceId!=null || !request.canvasOperationId.matches("[a-f0-9]{64}"))throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+   for(var c:request.changes)if(!"layout".equals(c.kind))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"캔버스 배치 항목만 저장할 수 있습니다.");
+   canvasHash=WeaverAuthService.hash(json.valueToTree(request.changes).toString());
+   var receipt=mapper.canvasReceipt(id,request.canvasOperationId);
+   if(receipt!=null){if(!receipt.equals(canvasHash))throw new ResponseStatusException(HttpStatus.CONFLICT,"저장 요청 식별자가 중복되었습니다.");return Map.of("revision",revision,"changes",request.changes.stream().map(c->mapper.item(id,key(c.kind,c.id))).filter(Objects::nonNull).toList());}
+  }
   if(importing){
    if(request.guestId==null || !request.guestId.matches("[a-f0-9]{64}") || request.sourceHash==null || !request.sourceHash.matches("[a-f0-9]{64}"))throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
    String owner=mapper.claimed(request.guestId);
    if(owner!=null){if(!owner.equals(id) || !request.sourceHash.equals(mapper.sourceHash(request.guestId)))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 귀속되었거나 내용이 다른 비회원 자료입니다.");return result(id,0,revision);}
   }
+  if(request.resourceId!=null && request.resourceId.startsWith("canvas:"))throw new ResponseStatusException(HttpStatus.CONFLICT,"캔버스 자동 저장을 사용하려면 앱을 새로고침해주세요.");
   if(request.resourceId!=null){
    if(importing || request.resourceId.isBlank() || request.resourceId.length()>512)throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
    checkEditLease(id,actor,request.resourceId,request);
@@ -63,6 +73,8 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    }
    request.changes=expanded;
   }
+  // Box membership is an operation on IDs, not replacement of another user's list.
+  if(!importing && !canvas)mergeBoxChanges(id,request);
   var removedMedia=new HashSet<String>();
   var seen=new HashSet<String>();
   for(var change:request.changes){valid(change.kind,change.id);String key=key(change.kind,change.id);if(!seen.add(key))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"중복 항목입니다.");
@@ -76,9 +88,9 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    String payload=change.deleted?null:change.value==null?null:change.value.toString();
    if(!change.deleted && (payload==null || payload.length()>10000000))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"항목 내용이 올바르지 않습니다.");
    String resource=editResource(change.kind,change.id,change.value,old==null?null:old.payload());
-   if(resource!=null)checkEditLease(id,actor,resource,request);
+   if(resource!=null && !canvas)checkEditLease(id,actor,resource,request);
    boolean identical=old!=null && old.deleted()==change.deleted && Objects.equals(old.payload(),payload);
-   if(!identical && request.resourceId==null && current!=change.baseRevision)throw new ResponseStatusException(HttpStatus.CONFLICT,"다른 기기에서 같은 항목을 수정했습니다. 로컬 수정은 보관됩니다.");
+   if(!canvas && !identical && request.resourceId==null && current!=change.baseRevision)throw new ResponseStatusException(HttpStatus.CONFLICT,"다른 기기에서 같은 항목을 수정했습니다. 로컬 수정은 보관됩니다.");
   }
   if(importing)mapper.claim(request.guestId,id,request.sourceHash);
   if(!request.changes.isEmpty()){mapper.advance(id);revision++;}
@@ -92,9 +104,50 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    String token=request.documentLeases==null?null:request.documentLeases.get(request.resourceId);
    if(token!=null)documentLocks.release(id,WeaverAuthService.hash(request.resourceId),actor,WeaverAuthService.hash(token));
   }
+  if(canvas)mapper.canvasReceiptPut(id,request.canvasOperationId,canvasHash);
   removeUnreferencedMedia(id,removedMedia);
   quota(id);if(importing)return result(id,0,revision);
   return Map.of("revision",revision,"changes",request.changes.stream().map(c->mapper.item(id,key(c.kind,c.id))).toList());
+ }
+ private void mergeBoxChanges(String workspace,WeaverWorkspaceRequest request){
+  var changes=new ArrayList<>(request.changes);
+  var additions=new LinkedHashMap<String,String>();
+  for(var c:changes){
+   if(!"list:memoBoxes".equals(c.kind) || c.deleted || c.previousValue==null || !c.previousValue.isObject() || c.value==null || !c.value.isObject())continue;
+   var old=mapper.item(workspace,key(c.kind,c.id));
+   if(old==null || old.deleted())continue; // Do not resurrect a concurrently deleted box.
+   try{
+    var remote=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(old.payload());
+    var merged=remote.deepCopy();
+    for(var field:c.value.properties()){
+     if(field.getKey().equals("ids"))continue;
+     if(!Objects.equals(field.getValue(),c.previousValue.get(field.getKey())))merged.set(field.getKey(),field.getValue());
+    }
+    for(var field:c.previousValue.properties())if(!c.value.has(field.getKey()))merged.remove(field.getKey());
+    var before=new LinkedHashSet<String>();for(var v:c.previousValue.path("ids"))before.add(v.asText());
+    var after=new LinkedHashSet<String>();for(var v:c.value.path("ids"))after.add(v.asText());
+    var ids=new LinkedHashSet<String>();for(var v:remote.path("ids"))ids.add(v.asText());
+    for(var v:before)if(!after.contains(v))ids.remove(v);
+    for(var v:after)if(!before.contains(v)){ids.add(v);additions.put(v,c.id);}
+    merged.set("ids",json.valueToTree(ids));c.value=merged;c.baseRevision=old.revision();
+   }catch(Exception e){throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"상자 정보를 확인해주세요.");}
+  }
+  // A thought belongs to one box. A later move wins for that thought only.
+  if(!additions.isEmpty())for(var old:mapper.changes(workspace,0)){
+   if(old.deleted() || !"list:memoBoxes".equals(old.kind()))continue;
+   var c=changes.stream().filter(v->v.kind.equals(old.kind())&&v.id.equals(old.id())).findFirst().orElse(null);
+   if(c!=null && c.deleted)continue;
+   try{
+    var value=(com.fasterxml.jackson.databind.node.ObjectNode)(c==null?json.readTree(old.payload()):c.value).deepCopy();
+    var ids=new ArrayList<String>();boolean removed=false;
+    for(var v:value.path("ids")){String target=additions.get(v.asText());if(target!=null&&!target.equals(old.id()))removed=true;else ids.add(v.asText());}
+    if(!removed)continue;
+    value.set("ids",json.valueToTree(ids));
+    if(c==null){c=new WeaverWorkspaceRequest.Change();c.kind=old.kind();c.id=old.id();changes.add(c);}
+    c.value=value;c.baseRevision=old.revision();
+   }catch(Exception e){throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"상자 정보를 확인해주세요.");}
+  }
+  request.changes=changes;
  }
  private Set<String> attachmentIds(String payload){
   var ids=new HashSet<String>();if(payload==null)return ids;
