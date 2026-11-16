@@ -14,6 +14,7 @@ public class WeaverWorkspaceController {
  @org.springframework.beans.factory.annotation.Autowired private WeaverVerificationMail mail;
  @org.springframework.beans.factory.annotation.Autowired private WeaverAuthRateLimit limits;
  @org.springframework.beans.factory.annotation.Autowired private WeaverCommentService comments;
+ @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceEvents events;
  private final WeaverSessionService sessions; private final WeaverWorkspaceService workspaces; private final String origin;
  public WeaverWorkspaceController(WeaverSessionService sessions,WeaverWorkspaceService workspaces,@Value("${WEAVER_WEB_ORIGIN:https://weaver.dogpoo.net}") String origin){this.sessions=sessions;this.workspaces=workspaces;this.origin=origin;}
  private Map<String,Object> account(String platform,HttpServletRequest r){
@@ -25,6 +26,19 @@ public class WeaverWorkspaceController {
   return sessions.webResume(token,proof);
  }
  @ModelAttribute public void headers(HttpServletResponse r){r.setHeader("Cache-Control","no-store");}
+ @PostMapping(value="/events",produces=MediaType.TEXT_EVENT_STREAM_VALUE)
+ public org.springframework.web.servlet.mvc.method.annotation.SseEmitter events(@PathVariable String platform,HttpServletRequest r,HttpServletResponse response,@RequestBody WeaverWorkspaceRequest request){
+  var user=account(platform,r);String actor=(String)user.get("id");var target=sharing.access(actor,request.workspaceId,false);
+  String authorization=r.getHeader("Authorization"),proof=r.getHeader("X-Weaver-Proof"),cookieName="__Host-weaver-"+r.getHeader("X-Weaver-Tab");
+  String token=null;if(r.getCookies()!=null)for(var cookie:r.getCookies())if(cookie.getName().equals(cookieName))token=cookie.getValue();
+  final String sessionToken=token;
+  response.setHeader("X-Accel-Buffering","no");response.setHeader("Cache-Control","no-cache, no-store, no-transform");
+  return events.subscribe(target.id(),()->{
+   var current="native".equals(platform)?sessions.me(authorization):sessions.webResume(sessionToken,proof);
+   if(!actor.equals(current.get("id")))throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+   sharing.access(actor,target.id(),false);
+  });
+ }
  @PostMapping("/status") public Map<String,Object> status(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverWorkspaceRequest request){var user=account(platform,r);var target=sharing.access((String)user.get("id"),request.workspaceId,false);var result=new HashMap<String,Object>(workspaces.status(target.id(),(String)user.get("id"),request));result.put("commentCounts",comments.counts(target.id()));return result;}
  @PostMapping("/read") public Map<String,Object> read(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverWorkspaceRequest request){var user=account(platform,r);var target=sharing.access((String)user.get("id"),request.workspaceId,false);var result=new HashMap<String,Object>(workspaces.read(target.id(),target.email(),(String)user.get("id"),request.since));result.put("commentCounts",comments.counts(target.id()));return result;}
  @PostMapping({"/save","/claim"}) public Map<String,Object> save(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverWorkspaceRequest request){var user=account(platform,r);var target=sharing.access((String)user.get("id"),request.workspaceId,true);return workspaces.save(target.id(),target.email(),(String)user.get("id"),request,r.getRequestURI().endsWith("/claim"));}

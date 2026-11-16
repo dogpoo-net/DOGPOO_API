@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;import org.springframework.transac
 import org.springframework.http.HttpStatus;import org.springframework.web.server.ResponseStatusException;
 import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.model.*;
 @Service public class WeaverWorkspaceService {
+ @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceEvents events;
  @org.springframework.beans.factory.annotation.Autowired private WeaverHistoryService history;
  @org.springframework.beans.factory.annotation.Autowired private WeaverSharingService permissions;
  @org.springframework.beans.factory.annotation.Autowired private WeaverDocumentLockMapper documentLocks;
@@ -107,7 +108,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   }
   if(canvas)mapper.canvasReceiptPut(id,request.canvasOperationId,canvasHash);
   removeUnreferencedMedia(id,removedMedia);
-  quota(id);if(importing)return result(id,0,revision);
+  quota(id);if(events!=null && !request.changes.isEmpty())events.changedAfterCommit(id);if(importing)return result(id,0,revision);
   return Map.of("revision",revision,"changes",request.changes.stream().map(c->mapper.item(id,key(c.kind,c.id))).toList());
  }
  private void mergeBoxChanges(String workspace,WeaverWorkspaceRequest request){
