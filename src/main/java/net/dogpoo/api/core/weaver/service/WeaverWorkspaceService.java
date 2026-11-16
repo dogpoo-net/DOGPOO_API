@@ -56,23 +56,24 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    var receipt=mapper.canvasReceipt(id,request.canvasOperationId);
    if(receipt!=null){if(!receipt.equals(canvasHash))throw new ResponseStatusException(HttpStatus.CONFLICT,"저장 요청 식별자가 중복되었습니다.");return Map.of("revision",revision,"changes",request.changes.stream().map(c->mapper.item(id,key(c.kind,c.id))).filter(Objects::nonNull).toList());}
   }
+  if(request.documentMerge){
+   if(importing || canvas || request.resourceId==null || request.resourceId.isBlank() || request.resourceId.length()>512 || request.resourceId.startsWith("canvas:") || request.changes.size()!=1)throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+   var c=request.changes.getFirst();valid(c.kind,c.id);
+   if(!"list:notes".equals(c.kind) || c.deleted || c.value==null || !request.resourceId.equals(c.value.path("project").path("id").asText()))throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+   var old=mapper.item(id,key(c.kind,c.id));
+   if(old!=null && (old.deleted() || old.revision()!=c.baseRevision)){
+    if(!old.deleted() && Objects.equals(old.payload(),c.value.toString()))return Map.of("revision",revision,"changes",List.of(old));
+    return Map.of("revision",revision,"documentConflict",old);
+   }
+   if(old==null && c.baseRevision!=0)throw new ResponseStatusException(HttpStatus.CONFLICT,"문서가 삭제되었습니다. 로컬 초안은 보관됩니다.");
+  }
   if(importing){
    if(request.guestId==null || !request.guestId.matches("[a-f0-9]{64}") || request.sourceHash==null || !request.sourceHash.matches("[a-f0-9]{64}"))throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
    String owner=mapper.claimed(request.guestId);
    if(owner!=null){if(!owner.equals(id) || !request.sourceHash.equals(mapper.sourceHash(request.guestId)))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 귀속되었거나 내용이 다른 비회원 자료입니다.");return result(id,0,revision);}
   }
   if(request.resourceId!=null && request.resourceId.startsWith("canvas:"))throw new ResponseStatusException(HttpStatus.CONFLICT,"캔버스 자동 저장을 사용하려면 앱을 새로고침해주세요.");
-  if(request.resourceId!=null){
-   if(importing || request.resourceId.isBlank() || request.resourceId.length()>512)throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-   checkEditLease(id,actor,request.resourceId,request);
-   var supplied=new HashSet<String>();var expanded=new ArrayList<>(request.changes);
-   for(var c:request.changes){var old=mapper.item(id,key(c.kind,c.id));if(!request.resourceId.equals(editResource(c.kind,c.id,c.value,old==null?null:old.payload())))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"다른 편집 영역의 데이터입니다.");supplied.add(key(c.kind,c.id));}
-   for(var old:mapper.changes(id,0)){
-    if(old.deleted() || supplied.contains(key(old.kind(),old.id())))continue;
-    if(request.resourceId.equals(editResource(old.kind(),old.id(),null,old.payload()))){var c=new WeaverWorkspaceRequest.Change();c.kind=old.kind();c.id=old.id();c.deleted=true;c.baseRevision=old.revision();expanded.add(c);}
-   }
-   request.changes=expanded;
-  }
+  if(request.resourceId!=null && !request.documentMerge)throw new ResponseStatusException(HttpStatus.CONFLICT,"문서 병합 저장을 사용하려면 앱을 새로고침해주세요.");
   // Box membership is an operation on IDs, not replacement of another user's list.
   if(!importing && !canvas)mergeBoxChanges(id,request);
   var removedMedia=new HashSet<String>();
@@ -88,19 +89,19 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    String payload=change.deleted?null:change.value==null?null:change.value.toString();
    if(!change.deleted && (payload==null || payload.length()>10000000))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"항목 내용이 올바르지 않습니다.");
    String resource=editResource(change.kind,change.id,change.value,old==null?null:old.payload());
-   if(resource!=null && !canvas)checkEditLease(id,actor,resource,request);
+   if(resource!=null && !canvas && !request.documentMerge)checkEditLease(id,actor,resource,request);
    boolean identical=old!=null && old.deleted()==change.deleted && Objects.equals(old.payload(),payload);
-   if(!canvas && !identical && request.resourceId==null && current!=change.baseRevision)throw new ResponseStatusException(HttpStatus.CONFLICT,"다른 기기에서 같은 항목을 수정했습니다. 로컬 수정은 보관됩니다.");
+   if(!canvas && !identical && current!=change.baseRevision)throw new ResponseStatusException(HttpStatus.CONFLICT,"다른 기기에서 같은 항목을 수정했습니다. 로컬 수정은 보관됩니다.");
   }
   if(importing)mapper.claim(request.guestId,id,request.sourceHash);
   if(!request.changes.isEmpty()){mapper.advance(id);revision++;}
   for(var c:request.changes){var old=mapper.item(id,key(c.kind,c.id));String after=c.deleted?null:c.value.toString();String action=importing?"import":"edit";
    if(!importing && !c.deleted && "list:notes".equals(c.kind)){
     String resource=editResource(c.kind,c.id,c.value,old==null?null:old.payload());
-    if(resource!=null && sharedEditing(documentLocks.active(id,WeaverAuthService.hash(resource))))action="unlocked_edit";
+    if(!request.documentMerge && resource!=null && sharedEditing(documentLocks.active(id,WeaverAuthService.hash(resource))))action="unlocked_edit";
    }
    history.record(id,actor,c.kind,c.id,old==null||old.deleted()?null:old.payload(),after,action);mapper.put(id,key(c.kind,c.id),c.kind,c.id,after,c.deleted,revision);if((c.kind.equals("list:notes")||c.kind.equals("list:elements")) && (old==null || !Objects.equals(old.payload(),after)))mapper.touch(id,key(c.kind,c.id),old==null?actor:null,actor);}
-  if(request.releaseAfterSave && request.resourceId!=null && !request.resourceId.startsWith("canvas:")){
+  if(!request.documentMerge && request.releaseAfterSave && request.resourceId!=null && !request.resourceId.startsWith("canvas:")){
    String token=request.documentLeases==null?null:request.documentLeases.get(request.resourceId);
    if(token!=null)documentLocks.release(id,WeaverAuthService.hash(request.resourceId),actor,WeaverAuthService.hash(token));
   }

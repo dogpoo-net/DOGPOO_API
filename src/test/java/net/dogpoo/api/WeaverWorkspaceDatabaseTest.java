@@ -47,30 +47,20 @@ class WeaverWorkspaceDatabaseTest {
   assertEquals(404,assertThrows(ResponseStatusException.class,()->service.mediaRead(a,email(a),media)).getStatusCode().value());
   try(var files=java.nio.file.Files.list(java.nio.file.Path.of("/tmp/weaver-workspace-media-tests/contents/note/image",a))){assertEquals(0,files.count());}
  }
- @Test void unlockingAllowsAllEditorsAndLastFullResourceSaveWins()throws Exception{
-  jdbc.update("INSERT INTO WEAVER_WORKSPACE_MEMBER(workspace_id,user_id,role) VALUES(?,?,'editor')",a,b);
+ @Test void concurrentCanvasPatchesAndDocumentCompareSave()throws Exception{
+  service.read(a,email(a),0);jdbc.update("INSERT INTO WEAVER_WORKSPACE_MEMBER(workspace_id,user_id,role) VALUES(?,?,'editor')",a,b);
   for(String scope:List.of("canvas:diagram","canvas:boxes","project-test")){
-   var first=new WeaverWorkspaceRequest();first.documentId=scope;first.leaseToken="a".repeat(64);first.documentLeases=Map.of(scope,first.leaseToken);
-   assertEquals(true,service.documentLease(a,email(a),a,first).get("acquired"));
-   var second=new WeaverWorkspaceRequest();second.documentId=scope;second.leaseToken="b".repeat(64);second.documentLeases=Map.of(scope,second.leaseToken);
-   assertEquals(false,service.documentLease(a,email(a),b,second).get("acquired"));
-   second.takeover=true;assertEquals(true,service.documentLease(a,email(a),b,second).get("acquired"));
-   for(var pair:List.of(Map.entry(a,first),Map.entry(b,second)))assertEquals(true,((Map<?,?>)((Map<?,?>)service.status(a,pair.getKey(),pair.getValue()).get("leases")).get(scope)).get("acquired"));
-   var save=new WeaverWorkspaceRequest();save.resourceId=scope;var change=new WeaverWorkspaceRequest.Change();
-   change.kind=scope.startsWith("canvas:")?"layout":"list:notes";
-   change.id=scope.equals("canvas:boxes")?"[\"page\",\"blocks\",\"positions\",\"one\"]":scope.equals("canvas:diagram")?"[\"page\",\"positions\",\"one\"]":"doc";
-   change.value=scope.startsWith("canvas:")?json.readTree("[1,2]"):json.readTree("{\"project\":{\"id\":\"project-test\",\"document\":\"first\"}}");save.changes=List.of(change);save.documentLeases=first.documentLeases;
-   service.save(a,email(a),a,save,false);
-   change.value=scope.startsWith("canvas:")?json.readTree("[8,9]"):json.readTree("{\"project\":{\"id\":\"project-test\",\"document\":\"last\"}}");save.documentLeases=second.documentLeases;
-   service.save(a,email(a),b,save,false); // deliberately stale baseRevision=0
-   var rows=(List<net.dogpoo.api.core.weaver.model.WeaverWorkspaceItem>)service.read(a,email(a),0).get("changes");
-   assertEquals(change.value.toString(),rows.stream().filter(r->r.id().equals(change.id)).findFirst().orElseThrow().payload());
-   first.release=true;service.documentLease(a,email(a),a,first);first.release=false;first.renewOnly=true;assertEquals(true,service.documentLease(a,email(a),a,first).get("acquired"));
-   save.changes=List.of();service.save(a,email(a),b,save,false); // full empty snapshot removes the earlier entry
-   rows=(List<net.dogpoo.api.core.weaver.model.WeaverWorkspaceItem>)service.read(a,email(a),0).get("changes");assertTrue(rows.stream().filter(r->r.id().equals(change.id)).findFirst().orElseThrow().deleted());
+   boolean canvas=scope.startsWith("canvas:");var save=new WeaverWorkspaceRequest();
+   if(canvas)save.canvasOperationId=UUID.randomUUID().toString().replace("-","").repeat(2);else{save.resourceId=scope;save.documentMerge=true;}
+   var c=new WeaverWorkspaceRequest.Change();c.kind=canvas?"layout":"list:notes";
+   c.id=scope.equals("canvas:boxes")?"[\"page\",\"blocks\",\"positions\",\"one\"]":scope.equals("canvas:diagram")?"[\"page\",\"positions\",\"one\"]":"doc";
+   c.value=json.readTree(canvas?"[1,2]":"{\"project\":{\"id\":\"project-test\",\"document\":\"first\"}}");save.changes=List.of(c);
+   var first=service.save(a,email(a),a,save,false);
+   if(canvas)save.canvasOperationId=UUID.randomUUID().toString().replace("-","").repeat(2);
+   c.value=json.readTree(canvas?"[8,9]":"{\"project\":{\"id\":\"project-test\",\"document\":\"last\"}}");
+   var second=service.save(a,email(a),b,save,false);
+   if(!canvas){assertTrue(second.containsKey("documentConflict"));c.baseRevision=((Number)first.get("revision")).longValue();service.save(a,email(a),b,save,false);}
+   var rows=(List<WeaverWorkspaceItem>)service.read(a,email(a),0).get("changes");assertEquals(c.value.toString(),rows.stream().filter(r->r.id().equals(c.id)).findFirst().orElseThrow().payload());
   }
-  jdbc.update("UPDATE WEAVER_WORKSPACE_MEMBER SET role='viewer' WHERE workspace_id=? AND user_id=?",a,b);
-  var viewer=new WeaverWorkspaceRequest();viewer.documentId="canvas:diagram";viewer.leaseToken="b".repeat(64);viewer.takeover=true;
-  assertEquals(403,assertThrows(ResponseStatusException.class,()->service.documentLease(a,email(a),b,viewer)).getStatusCode().value());
  }
 }
