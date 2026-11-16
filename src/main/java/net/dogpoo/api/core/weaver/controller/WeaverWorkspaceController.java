@@ -13,6 +13,7 @@ public class WeaverWorkspaceController {
  @org.springframework.beans.factory.annotation.Autowired private WeaverHistoryService history;
  @org.springframework.beans.factory.annotation.Autowired private WeaverVerificationMail mail;
  @org.springframework.beans.factory.annotation.Autowired private WeaverAuthRateLimit limits;
+ @org.springframework.beans.factory.annotation.Autowired private WeaverCommentService comments;
  private final WeaverSessionService sessions; private final WeaverWorkspaceService workspaces; private final String origin;
  public WeaverWorkspaceController(WeaverSessionService sessions,WeaverWorkspaceService workspaces,@Value("${WEAVER_WEB_ORIGIN:https://weaver.dogpoo.net}") String origin){this.sessions=sessions;this.workspaces=workspaces;this.origin=origin;}
  private Map<String,Object> account(String platform,HttpServletRequest r){
@@ -39,6 +40,9 @@ public class WeaverWorkspaceController {
  }
  @PostMapping("/transfer") public Map<String,Object> transfer(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){var u=account(platform,r);var target=sharing.access((String)u.get("id"),request.workspaceId,true);workspaces.read(target.id(),target.email(),(String)u.get("id"),0);sharing.transfer((String)u.get("id"),request.workspaceId,request.userId);return Map.of("updated",true);}
  @PostMapping("/history") public Map<String,Object> history(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){var u=account(platform,r);var target=sharing.access((String)u.get("id"),request.workspaceId,false);return Map.of("versions",history.list(target.id(),request.documentId,request.beforeVersion));}
+ @PostMapping({"/comments/read","/comments/write"}) public Map<String,Object> comments(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverCommentRequest request){
+  String actor=(String)account(platform,r).get("id");boolean write=r.getRequestURI().endsWith("/write");limits.check((write?"comments-write:":"comments-read:")+actor,write?30:180);return comments.handle(actor,request,write);
+ }
  @ExceptionHandler(ResponseStatusException.class) public ResponseEntity<Map<String,String>> error(ResponseStatusException e){return ResponseEntity.status(e.getStatusCode()).body(Map.of("message",e.getReason()==null?"인증된 계정의 자료만 사용할 수 있습니다.":e.getReason()));}
  @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class) public ResponseEntity<Map<String,String>> duplicate(){return ResponseEntity.status(409).body(Map.of("message","이미 처리 중인 가져오기입니다. 같은 계정으로 다시 시도해주세요."));}
 }

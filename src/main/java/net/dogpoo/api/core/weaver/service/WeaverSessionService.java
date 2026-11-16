@@ -37,7 +37,7 @@ public class WeaverSessionService {
  private Map<String,Object> identity(WeaverDeviceSession s){
   WeaverAccount a=mapper.account(s.userId());
   if(a==null || a.verifiedAt()==null)throw denied();
-  return new HashMap<>(Map.of("id",a.id(),"email",a.email(),"name",a.displayName()==null?"":a.displayName(),"expiresIn",1800));
+  return new HashMap<>(Map.of("id",a.id(),"email",a.email(),"name",WeaverAuthService.socialName(a.displayName(),a.email()),"expiresIn",1800));
  }
  @Transactional public Map<String,Object> login(WeaverAuthRequest request,String kind,String proof){
   return issue(auth.authenticate(request),kind,proof);
