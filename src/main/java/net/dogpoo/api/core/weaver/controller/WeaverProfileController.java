@@ -26,9 +26,10 @@ public class WeaverProfileController {
  @ModelAttribute public void headers(HttpServletResponse r){r.setHeader("Cache-Control","no-store");}
  @PostMapping("/social/unlink") public Map<String,Object> unlink(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverProfileRequest request){String id=(String)account(platform,r).get("id");limits.check("unlink:"+id,20);social.unlink(id,request.provider);return Map.of("unlinked",true);}
  @PostMapping("/read") public Map<String,Object> read(@PathVariable String platform,HttpServletRequest r){return profiles.read((String)account(platform,r).get("id"));}
- @PostMapping({"/name","/photo","/password/request","/password/change"}) public Map<String,Object> update(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverProfileRequest request){
+ @PostMapping({"/name","/photo","/photo/default","/password/request","/password/change"}) public Map<String,Object> update(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverProfileRequest request){
   String id=(String)account(platform,r).get("id");String path=r.getRequestURI();limits.check("profile:"+id,30);
   if(path.endsWith("/name"))profiles.name(id,request.name);
+  else if(path.endsWith("/photo/default"))profiles.defaultPhoto(id);
   else if(path.endsWith("/photo"))profiles.photo(id,request.image);
   else if(path.endsWith("/password/request")){limits.check("password-mail:"+id,3);profiles.requestPassword(id);}
   else{limits.check("password-change:"+id,10);profiles.changePassword(id,request);}

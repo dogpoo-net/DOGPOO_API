@@ -38,6 +38,15 @@ import net.dogpoo.api.core.weaver.model.*;
   return result;
  }
  @Transactional public void name(String id,String name){profiles.name(id,WeaverAuthService.name(name));}
+ @Transactional public void defaultPhoto(String id){
+  profiles.ensure(id);var previous=profiles.lock(id);
+  int face=(Math.floorMod(previous.defaultFace(),6)+1+new SecureRandom().nextInt(5))%6;
+  profiles.defaultPhoto(id,face);
+  if(previous.avatarPath()!=null){
+   Path old=file(id,previous.avatarPath());
+   TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){@Override public void afterCommit(){try{Files.deleteIfExists(old);}catch(IOException ignored){}}});
+  }
+ }
  @Transactional public void photo(String id,String encoded){
   if(encoded==null || encoded.length()>2800000)throw bad("사진은 2MB 이하로 선택해주세요.");
   byte[] output;
