@@ -3,6 +3,8 @@ import org.apache.ibatis.annotations.*;
 import net.dogpoo.api.core.weaver.model.WeaverProfile;
 import java.util.List;
 @Mapper public interface WeaverProfileMapper {
+ @Select("SELECT signup_provider FROM WEAVER_USER_ACCOUNT WHERE id=#{id}") String signupProvider(String id);
+
  @Insert("INSERT IGNORE INTO WEAVER_ACCOUNT_PROFILE(user_id,default_face) VALUES(#{id},FLOOR(RAND()*6))") int ensure(String id);
  @Select("SELECT avatar_url AS avatarUrl,avatar_path AS avatarPath,email_enabled AS emailEnabled,default_face AS defaultFace FROM WEAVER_ACCOUNT_PROFILE WHERE user_id=#{id} FOR UPDATE") WeaverProfile lock(String id);
  @Select("SELECT avatar_url AS avatarUrl,avatar_path AS avatarPath,email_enabled AS emailEnabled,default_face AS defaultFace FROM WEAVER_ACCOUNT_PROFILE WHERE user_id=#{id}") WeaverProfile get(String id);

@@ -55,9 +55,12 @@ public class WeaverAuthService {
   validateCredentials(request,true);
   String email=email(request.email);
   String hash=encoder.encode(request.password);
+  mapper.lockIdentityWrites();
+  if(mapper.emailUsed(email,"")>0) return;
   if(mapper.account(email)!=null) return; // Identical public response for existing accounts.
   String id=UUID.randomUUID().toString();
   mapper.insertAccount(id,email,hash,name(request.name));
+  mapper.signupProvider(id,"email");
   send(id,email);
  }
  @Transactional

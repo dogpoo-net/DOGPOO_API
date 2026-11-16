@@ -5,6 +5,12 @@ import org.apache.ibatis.annotations.*;
 
 @Mapper
 public interface WeaverAuthMapper {
+ @Select("SELECT id FROM WEAVER_AUTH_WRITE_LOCK WHERE id=1 FOR UPDATE") int lockIdentityWrites();
+ @Select("SELECT COUNT(*) FROM WEAVER_USER_ACCOUNT a WHERE a.id != #{exceptId} AND (a.email=#{email} OR EXISTS(SELECT 1 FROM WEAVER_SOCIAL_ACCOUNT s WHERE s.user_id=a.id AND s.login_email=#{email}))")
+ int emailUsed(@Param("email") String email,@Param("exceptId") String exceptId);
+ @Update("UPDATE WEAVER_USER_ACCOUNT SET signup_provider=#{provider} WHERE id=#{id}")
+ int signupProvider(@Param("id") String id,@Param("provider") String provider);
+
  @Select("SELECT id,email,password_hash AS passwordHash,verified_at AS verifiedAt,display_name AS displayName FROM WEAVER_USER_ACCOUNT WHERE email=#{email}")
  WeaverAccount account(String email);
  @Select("SELECT id,email,password_hash AS passwordHash,verified_at AS verifiedAt,display_name AS displayName FROM WEAVER_USER_ACCOUNT WHERE email=#{email} FOR UPDATE")

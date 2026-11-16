@@ -9,6 +9,7 @@ import net.dogpoo.api.core.weaver.service.*;
 import net.dogpoo.api.core.weaver.model.*;
 @RestController @RequestMapping("/weaver/api/auth/session/{platform:web|native}/profile")
 public class WeaverProfileController {
+ @org.springframework.beans.factory.annotation.Autowired private WeaverSocialAccountService social;
  @org.springframework.beans.factory.annotation.Autowired private WeaverWithdrawalService withdrawal;
  @org.springframework.beans.factory.annotation.Autowired private WeaverErasureService erasure;
  private final WeaverSessionService sessions;private final WeaverProfileService profiles;private final WeaverAuthRateLimit limits;private final String origin;
@@ -23,6 +24,7 @@ public class WeaverProfileController {
  }
 
  @ModelAttribute public void headers(HttpServletResponse r){r.setHeader("Cache-Control","no-store");}
+ @PostMapping("/social/unlink") public Map<String,Object> unlink(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverProfileRequest request){String id=(String)account(platform,r).get("id");limits.check("unlink:"+id,20);social.unlink(id,request.provider);return Map.of("unlinked",true);}
  @PostMapping("/read") public Map<String,Object> read(@PathVariable String platform,HttpServletRequest r){return profiles.read((String)account(platform,r).get("id"));}
  @PostMapping({"/name","/photo","/password/request","/password/change"}) public Map<String,Object> update(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverProfileRequest request){
   String id=(String)account(platform,r).get("id");String path=r.getRequestURI();limits.check("profile:"+id,30);

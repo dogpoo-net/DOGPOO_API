@@ -33,7 +33,7 @@ import net.dogpoo.api.core.weaver.model.*;
  private Path file(String id,String path){Path p=root.resolve(path).normalize();if(!p.getParent().equals(root.resolve(id)))throw new IllegalStateException("Invalid profile path");return p;}
  public Map<String,Object> read(String id){
   var a=sessions.account(id);if(a==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-  profiles.ensure(id);var p=profiles.get(id);var result=new HashMap<String,Object>();result.put("name",a.displayName()==null?"":a.displayName());result.put("email",a.email());result.put("providers",profiles.providers(id));result.put("defaultFace",p==null?0:p.defaultFace());result.put("emailEnabled",p==null || p.emailEnabled());
+  profiles.ensure(id);var p=profiles.get(id);var result=new HashMap<String,Object>();result.put("name",a.displayName()==null?"":a.displayName());result.put("email",a.email());result.put("providers",profiles.providers(id));String initial=profiles.signupProvider(id);result.put("signupProvider",initial==null?"unknown":initial);result.put("defaultFace",p==null?0:p.defaultFace());result.put("emailEnabled",p==null || p.emailEnabled());
   if(p!=null){if(p.avatarPath()!=null){try{result.put("image",Base64.getEncoder().encodeToString(Files.readAllBytes(file(id,p.avatarPath()))));}catch(IOException e){/* Missing image uses the client's bundled fallback. */}}else if(safeAvatar(p.avatarUrl())!=null)result.put("avatarUrl",safeAvatar(p.avatarUrl()));}
   return result;
  }
