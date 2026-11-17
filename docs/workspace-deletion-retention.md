@@ -12,12 +12,12 @@ Policy agreed 2026-11-18 (Asia/Seoul). No subscription gating is enabled yet.
   workspace, owner, current email and purpose. Codes are not logged or stored raw.
 - Eligibility and ownership are rechecked under the workspace lock at deletion.
   A blank preview does not authorize deleting data subsequently written by someone.
-- Verified deletion archives the workspace for 60 days. It disappears from active
+- Verified deletion archives the workspace for 30 days. It disappears from active
   catalogs; normal reads, writes and invitation acceptance are denied. Memberships,
   authorship, history and attachments remain available for owner restoration.
 - `deleted-workspaces` lists only the owner's unexpired archives. `restore-workspace`
   preserves original IDs/content and rejects expired retention periods.
-- A once-per-minute job rechecks deadlines under a row lock and permanently deletes
+- A daily midnight (00:00 Asia/Seoul) job rechecks deadlines under a row lock and permanently deletes
   expired DB data, enqueuing physical attachment erasure through the existing
   durable deletion queue. File deletion failures are retried. This is a recovery
   retention period, not a database backup policy.
@@ -32,3 +32,10 @@ management without switching the active workspace.
 
 Follow-up product decision: which plans include restoration and any retention or
 storage allowances. The current implementation offers restoration to every owner.
+
+Policy updated 2026-11-18: retention is 30 days. Apply migration 022 to recalculate
+existing deadlines from archived_at. Restore eligibility ends exactly at the
+deadline; physical purge starts at the next daily midnight run. No sleep or
+per-workspace timer is used. All expired IDs are processed, not only the first 100.
+If the server is down at midnight, expired workspaces remain inaccessible and are
+processed at the next scheduled midnight after the service is running.
