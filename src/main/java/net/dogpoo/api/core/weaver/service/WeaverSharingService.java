@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;import org.springframework.transac
 import org.springframework.http.HttpStatus;import org.springframework.web.server.ResponseStatusException;
 import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.model.*;
 @Service public class WeaverSharingService {
+ @org.springframework.beans.factory.annotation.Autowired private WeaverWithdrawalMapper deletion;
  private final WeaverWorkspaceMapper workspaces;private final WeaverSharingMapper members;private final WeaverSessionMapper accounts;
  public WeaverSharingService(WeaverWorkspaceMapper workspaces,WeaverSharingMapper members,WeaverSessionMapper accounts){this.workspaces=workspaces;this.members=members;this.accounts=accounts;}
  public record Access(String id,String email,String role){}
@@ -25,6 +26,36 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  }
  @Transactional public Map<String,Object> catalog(String user,String email){
   String primary=primary(user);var list=new ArrayList<Map<String,Object>>(workspaces.owned(user));list.addAll(members.memberships(user));return Map.of("workspaces",list,"defaultWorkspaceId",primary,"invitations",members.received(email));
+ }
+ private String workspaceName(String value){
+  String name=value==null?"":value.strip();
+  if(name.isEmpty() || name.codePointCount(0,name.length())>80)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"워크스페이스 이름은 1~80자로 입력해주세요.");
+  return name;
+ }
+ @Transactional public Map<String,Object> createWorkspace(String user,String name){
+  name=workspaceName(name);workspaces.lockAccountId(user);
+  String id=UUID.randomUUID().toString();workspaces.create(id,user);workspaces.rename(id,name);
+  return Map.of("workspaceId",id);
+ }
+ private void existingOwner(String user,String workspace){
+  if(workspace==null || workspaces.revision(workspace)==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"워크스페이스를 찾을 수 없습니다.");
+  workspaces.lock(workspace);
+  if(!user.equals(workspaces.owner(workspace)))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 관리할 수 있습니다.");
+ }
+ @Transactional public void renameWorkspace(String user,String workspace,String name){
+  name=workspaceName(name);existingOwner(user,workspace);workspaces.rename(workspace,name);
+ }
+ @Transactional public void deleteWorkspace(String user,String workspace){
+  workspaces.lockAccountId(user);existingOwner(user,workspace);
+  workspaces.tombstone(workspace);deletion.enqueue(workspace,"workspace");workspaces.deleteWorkspace(workspace);
+ }
+ @Transactional public void leaveWorkspace(String user,String workspace){
+  if(workspace==null || workspaces.revision(workspace)==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+  workspaces.lock(workspace);
+  if(user.equals(workspaces.owner(workspace)))throw new ResponseStatusException(HttpStatus.CONFLICT,"소유자는 소유권을 이전하거나 워크스페이스를 삭제해주세요.");
+  if(members.role(workspace,user)==null)throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+  // Remove membership only: account, authorship metadata, comments and history remain.
+  members.remove(workspace,user);
  }
  @Transactional public void transfer(String user,String workspace,String recipient){transferInternal(user,workspace,recipient,true);}
  @Transactional public void transferForWithdrawal(String user,String workspace,String recipient){transferInternal(user,workspace,recipient,false);}

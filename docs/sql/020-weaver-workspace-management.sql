@@ -1,0 +1,5 @@
+ALTER TABLE WEAVER_ACCOUNT_WORKSPACE ADD COLUMN IF NOT EXISTS name VARCHAR(80) NULL;
+-- Prevent legacy account-ID initialization from resurrecting deleted workspaces.
+CREATE TABLE IF NOT EXISTS WEAVER_WORKSPACE_DELETION (
+  workspace_id CHAR(36) CHARACTER SET ascii NOT NULL PRIMARY KEY
+) ENGINE=InnoDB;

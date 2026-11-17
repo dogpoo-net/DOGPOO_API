@@ -1,7 +1,7 @@
 package net.dogpoo.api.core.weaver.mapper;
 import org.apache.ibatis.annotations.*;import java.util.*;
 @Mapper public interface WeaverSharingMapper {
- @Select("SELECT m.workspace_id AS workspaceId,m.role,a.display_name AS name FROM WEAVER_WORKSPACE_MEMBER m JOIN WEAVER_ACCOUNT_WORKSPACE w ON w.user_id=m.workspace_id JOIN WEAVER_USER_ACCOUNT a ON a.id=w.owner_id WHERE m.user_id=#{id} ORDER BY m.joined_at") List<Map<String,Object>> memberships(String id);
+ @Select("SELECT m.workspace_id AS workspaceId,m.role,COALESCE(w.name,a.display_name,'공유 워크스페이스') AS name FROM WEAVER_WORKSPACE_MEMBER m JOIN WEAVER_ACCOUNT_WORKSPACE w ON w.user_id=m.workspace_id JOIN WEAVER_USER_ACCOUNT a ON a.id=w.owner_id WHERE m.user_id=#{id} ORDER BY m.joined_at") List<Map<String,Object>> memberships(String id);
  @Select("SELECT role FROM WEAVER_WORKSPACE_MEMBER WHERE workspace_id=#{workspace} AND user_id=#{user}") String role(@Param("workspace") String workspace,@Param("user") String user);
  @Select("SELECT m.user_id AS userId,m.role,a.email,a.display_name AS name FROM WEAVER_WORKSPACE_MEMBER m JOIN WEAVER_USER_ACCOUNT a ON a.id=m.user_id WHERE m.workspace_id=#{id} ORDER BY m.joined_at") List<Map<String,Object>> members(String id);
  @Select("SELECT COUNT(*) FROM WEAVER_WORKSPACE_MEMBER WHERE workspace_id=#{id} AND role='editor'") int editors(String id);
