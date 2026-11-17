@@ -17,6 +17,7 @@ public class WeaverWorkspaceController {
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceEvents events;
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceLifecycleService lifecycle;
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspacePolicyService policy;
+ @org.springframework.beans.factory.annotation.Autowired private WeaverAudioTranscriptionService audio;
  private final WeaverSessionService sessions; private final WeaverWorkspaceService workspaces; private final String origin;
  public WeaverWorkspaceController(WeaverSessionService sessions,WeaverWorkspaceService workspaces,@Value("${WEAVER_WEB_ORIGIN:https://weaver.dogpoo.net}") String origin){this.sessions=sessions;this.workspaces=workspaces;this.origin=origin;}
  private Map<String,Object> account(String platform,HttpServletRequest r){
@@ -74,6 +75,7 @@ public class WeaverWorkspaceController {
  @PostMapping({"/comments/read","/comments/write"}) public Map<String,Object> comments(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverCommentRequest request){
   String actor=(String)account(platform,r).get("id");boolean write=r.getRequestURI().endsWith("/write");limits.check((write?"comments-write:":"comments-read:")+actor,write?30:180);return comments.handle(actor,request,write);
  }
+ @PostMapping("/account-policy") public Map<String,Object> accountPolicy(@PathVariable String platform,HttpServletRequest r){return policy.accountStatus((String)account(platform,r).get("id"));}
  @PostMapping("/subscription") public Map<String,Object> subscription(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){var target=sharing.access((String)account(platform,r).get("id"),request.workspaceId,false);return policy.status(target.id());}
  @PostMapping("/subscription-cancel") public Map<String,Object> subscriptionCancel(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){return policy.cancel((String)account(platform,r).get("id"),request.workspaceId,request.cancel);}
  @PostMapping("/select-active-workspaces") public Map<String,Object> selectSpaces(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){policy.chooseSpaces((String)account(platform,r).get("id"),request.ids);return Map.of("updated",true);}
@@ -81,10 +83,13 @@ public class WeaverWorkspaceController {
  @PostMapping("/admin/users") public Map<String,Object> adminUsers(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){String actor=(String)account(platform,r).get("id");limits.check("admin-search:"+actor,120);return policy.adminUsers(actor,request.query);}
  @PostMapping("/admin/account") public Map<String,Object> adminAccount(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){return policy.adminAccount((String)account(platform,r).get("id"),request.userId);}
  @PostMapping("/admin/account-role") public Map<String,Object> adminRole(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){policy.adminRole((String)account(platform,r).get("id"),request.userId,request.role);return Map.of("updated",true);}
- @PostMapping("/admin/subscription") public Map<String,Object> adminSubscription(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){return policy.adminSubscription((String)account(platform,r).get("id"),request.workspaceId,request.plan,request.periodEnd,request.cancel);}
+ @PostMapping("/admin/subscription") public Map<String,Object> adminSubscription(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){return policy.adminSubscription((String)account(platform,r).get("id"),request.userId,request.plan,request.periodEnd,request.cancel);}
  @PostMapping("/admin/members") public Map<String,Object> adminMembers(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){return Map.of("members",policy.adminMembers((String)account(platform,r).get("id"),request.workspaceId));}
  @PostMapping("/admin/member-role") public Map<String,Object> adminMember(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){policy.adminMember((String)account(platform,r).get("id"),request.workspaceId,request.userId,request.role);return Map.of("updated",true);}
  @PostMapping("/admin/audit") public Map<String,Object> adminAudit(@PathVariable String platform,HttpServletRequest r){return Map.of("events",policy.audit((String)account(platform,r).get("id")));}
+ @PostMapping("/audio/transcribe") public Map<String,Object> transcribe(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverWorkspaceRequest request){String actor=(String)account(platform,r).get("id");var target=sharing.access(actor,request.workspaceId,true);limits.check("transcribe:"+actor,3);return audio.transcribe(target.id(),request.data);}
+ @PostMapping("/admin/audio-settings") public Map<String,Object> audioSettings(@PathVariable String platform,HttpServletRequest r){return audio.settings((String)account(platform,r).get("id"));}
+ @PostMapping("/admin/audio-configure") public Map<String,Object> audioConfigure(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){return audio.configure((String)account(platform,r).get("id"),request.provider,request.model,request.enabled);}
  @ExceptionHandler(ResponseStatusException.class) public ResponseEntity<Map<String,String>> error(ResponseStatusException e){return ResponseEntity.status(e.getStatusCode()).body(Map.of("message",e.getReason()==null?"인증된 계정의 자료만 사용할 수 있습니다.":e.getReason()));}
  @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class) public ResponseEntity<Map<String,String>> duplicate(){return ResponseEntity.status(409).body(Map.of("message","이미 처리 중인 가져오기입니다. 같은 계정으로 다시 시도해주세요."));}
 }

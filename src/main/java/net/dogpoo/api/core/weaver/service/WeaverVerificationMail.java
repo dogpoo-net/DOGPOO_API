@@ -22,7 +22,7 @@ public class WeaverVerificationMail {
  public void invite(String email,String token,String role){deliver(email,"WEAVER 워크스페이스 초대","워크스페이스에 "+(role.equals("editor")?"편집자":"읽기 전용 참여자")+"로 초대되었습니다. 초대받은 이메일 계정으로 로그인한 뒤 수락해주세요.\n\n"+baseUrl+"#invite="+token+"\n\n초대는 7일 동안 유효합니다.");}
  public void password(String email,String code){deliver(email,"WEAVER 비밀번호 변경 인증","비밀번호 변경 인증코드: "+code+"\n\n10분 안에 프로필의 비밀번호 변경 화면에 입력해주세요. 코드는 한 번만 사용할 수 있습니다. 요청하지 않았다면 무시해주세요.");}
  public void withdrawal(String email,String code){deliver(email,"WEAVER 회원탈퇴 인증","회원탈퇴 인증코드: "+code+"\n\n10분 안에 회원탈퇴 화면에 입력해주세요. 이 코드는 계정과 자료의 영구 삭제에 사용됩니다. 요청하지 않았다면 입력하거나 공유하지 마세요.");}
- public void workspaceDeletion(String email,String code){deliver(email,"WEAVER 워크스페이스 삭제 인증","워크스페이스 삭제 인증코드: "+code+"\n\n10분 안에 삭제 화면에 입력해주세요. 무료 공간은 즉시 영구 삭제되며 복원할 수 없습니다. 유료 공간은 삭제 후 30일간 보관됩니다. 삭제 화면의 안내를 확인해주세요. 요청하지 않았다면 입력하거나 공유하지 마세요.");}
+ public void workspaceDeletion(String email,String code){deliver(email,"WEAVER 워크스페이스 삭제 인증","워크스페이스 삭제 인증코드: "+code+"\n\n10분 안에 삭제 화면에 입력해주세요. 사용한 워크스페이스는 플랜에 관계없이 삭제 후 30일간 보관됩니다. 보관 기간 내 유료 구독으로 전환하면 복원할 수 있습니다. 삭제 화면의 안내를 확인해주세요. 요청하지 않았다면 입력하거나 공유하지 마세요.");}
  private void deliver(String email,String subject,String body) {
   if(host.isBlank() || from.isBlank() || username.isBlank() || password.isBlank())
    throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"인증메일 설정을 확인해주세요.");

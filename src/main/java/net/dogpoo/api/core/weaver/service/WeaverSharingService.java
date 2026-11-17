@@ -13,6 +13,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   if(target==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"이용 가능한 워크스페이스가 없습니다.");
   if(workspaces.archived(target))throw new ResponseStatusException(HttpStatus.GONE,"삭제된 워크스페이스입니다.");
   String role=user.equals(workspaces.owner(target))?"owner":members.role(target,user);
+  if(policy!=null && !user.equals(workspaces.owner(target)) && !policy.online(target))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자의 Free 공간은 공유가 중단된 상태입니다.");
   if("editor".equals(role) && policy!=null && !policy.editorAllowed(target,user))role="viewer";
   if(role==null || (write && role.equals("viewer")))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"이 워크스페이스를 편집할 권한이 없습니다.");
   var owner=accounts.account(workspaces.owner(target));if(owner==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);return new Access(target,owner.email(),role);
@@ -27,8 +28,9 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  @Transactional public Map<String,Object> catalog(String user,String email){
   var list=new ArrayList<Map<String,Object>>(workspaces.owned(user));list.addAll(members.memberships(user));
   var result=new HashMap<String,Object>();
+  if(policy!=null)list.removeIf(row->!"owner".equals(row.get("role"))&&!policy.online((String)row.get("workspaceId")));
   if(policy!=null)list.replaceAll(row->{var decorated=policy.decorate(row);if("editor".equals(decorated.get("role"))&&!policy.editorAllowed((String)row.get("workspaceId"),user))decorated.put("role","viewer");return decorated;});
-  result.put("workspaces",list);result.put("defaultWorkspaceId",list.isEmpty()?null:list.getFirst().get("workspaceId"));result.put("invitations",members.received(email));result.put("isAdmin",policy!=null&&policy.admin(user));return result;
+  result.put("workspaces",list);result.put("defaultWorkspaceId",list.isEmpty()?null:list.getFirst().get("workspaceId"));result.put("invitations",members.received(email));result.put("isAdmin",policy!=null&&policy.admin(user));if(policy!=null)result.put("accountPolicy",policy.accountStatus(user));return result;
  }
  private String workspaceName(String value){
   String name=value==null?"":value.strip();
@@ -36,8 +38,8 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   return name;
  }
  @Transactional public Map<String,Object> createWorkspace(String user,String name){
-  name=workspaceName(name);workspaces.lockAccountId(user);if(policy!=null)policy.admission(user);
-  String id=UUID.randomUUID().toString();workspaces.create(id,user);workspaces.initializeName(id,name);
+  name=workspaceName(name);workspaces.lockAccountId(user);if(policy!=null)policy.creation(user);
+  String id=UUID.randomUUID().toString();workspaces.create(id,user);workspaces.initializeName(id,name);if(policy!=null)policy.created(user);
   return Map.of("workspaceId",id);
  }
  private void existingOwner(String user,String workspace){
@@ -74,12 +76,13 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  public List<String> emailSuggestions(String user,String workspace,String query){
   var target=access(user,workspace,false);
   if(!"owner".equals(target.role()))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+  if(policy!=null)policy.requireOnline(target.id());
   String prefix=query==null?"":query.strip().toLowerCase(Locale.ROOT);
   if(prefix.length()<2 || prefix.length()>254)return List.of();
   return members.emailSuggestions(prefix.replace("!","!!").replace("%","!%").replace("_","!_"),target.id(),user);
  }
  @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED) public Map<String,Object> invite(String user,String workspace,String email,String role){
-  lockOwner(user,workspace);role=role(role);email=WeaverAuthService.email(email);if(accounts.account(workspaces.owner(workspace)).email().equals(email))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"자신은 이미 소유자입니다.");
+  lockOwner(user,workspace);if(policy!=null)policy.requireOnline(workspace);role=role(role);email=WeaverAuthService.email(email);if(accounts.account(workspaces.owner(workspace)).email().equals(email))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"자신은 이미 소유자입니다.");
   if(!members.registeredEmail(email))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"가입된 계정의 이메일을 입력해주세요.");
   for(var m:members.members(workspace))if(email.equals(m.get("email")))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 참여한 사용자입니다.");
   for(var pending:members.invitations(workspace))if(email.equals(pending.get("email")))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 대기 중인 초대가 있습니다. 취소 후 다시 초대해주세요.");
@@ -90,7 +93,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED) public Map<String,Object> accept(String user,String email,String token,String inviteId){
   String id=token==null?inviteId:members.token(WeaverAuthService.hash(token));if(id==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"초대를 찾을 수 없습니다.");
   var invite=members.invite(id);if(invite==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-  String workspace=(String)invite.get("workspaceId");workspaces.ensure(workspace);workspaces.lock(workspace);if(workspaces.archived(workspace))throw new ResponseStatusException(HttpStatus.GONE);invite=members.invite(id);
+  String workspace=(String)invite.get("workspaceId");if(policy!=null)policy.requireOnline(workspace);workspaces.ensure(workspace);workspaces.lock(workspace);if(workspaces.archived(workspace))throw new ResponseStatusException(HttpStatus.GONE);invite=members.invite(id);
   if(!email.equals(invite.get("email")))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"초대받은 이메일 계정으로 로그인해주세요.");
   if("accepted".equals(invite.get("status")) && members.role(workspace,user)!=null)return Map.of("workspaceId",workspace);
   if(!"pending".equals(invite.get("status")) || !(Boolean.TRUE.equals(invite.get("valid")) || (invite.get("valid") instanceof Number n && n.intValue()==1)))throw new ResponseStatusException(HttpStatus.GONE,"만료되었거나 취소된 초대입니다.");

@@ -12,12 +12,12 @@ wb=Workbook();summary=wb.active;summary.title='정책 요약'
 summary.append(['영역','정책','비고'])
 policies=[
 ('최초 생성','가입 시 기본 워크스페이스 1회 생성','기존 계정은 마이그레이션 시 최초 생성 완료로 표시'),
-('소유 수','초대받은 공간 제외, 활성 소유 공간만 계산','수치 미정: NULL은 추가 제한 없음'),
+('소유 수','초대받은 공간 제외, 활성 소유 공간만 계산','Free 2 / Standard 10 / Pro 무제한'),
 ('0개 상태','마지막 삭제·이전 허용, 자동 재생성 금지','생성·복원·초대 수락 화면 제공'),
-('무료 삭제','사용한 공간은 이메일 인증 후 즉시 영구 삭제','파일은 기존 삭제 큐로 처리; API 접근 즉시 차단'),
-('유료 삭제','사용한 공간은 30일 보관','미사용 공간은 기존 정책대로 바로 삭제'),
+('무료 삭제','30일 보관, 유료 전환 후 복원 가능','만료 후 삭제 큐 처리; 보관 중 접근 차단'),
+('유료 삭제','사용한 공간은 30일 보관','미사용 공간도 인증 없이 30일 보관'),
 ('복원','보관 기한 내 유료 권한 및 소유·자료 한도 검사','다운그레이드 전 삭제한 자료는 기존 기한 유지'),
-('구독 귀속','계정이 아닌 워크스페이스별','계정 상세에서 소유 공간 선택 후 조정'),
+('구독 귀속','계정 단위, 소유 공간 전체에 적용','계정 상세에서 구독 조정'),
 ('취소','종료일 유지, 종료 시 Free','취소 예약 해제는 종료일을 연장하지 않음'),
 ('만료','DB UTC 기준 요청마다 판정','스케줄러 지연과 무관; 자동 결제 연장 없음'),
 ('다운그레이드','기존 자료 보존, 초과하는 추가 사용 제한','소유 한도·편집자 초과 시 우선 대상 선택 가능'),
@@ -26,7 +26,7 @@ policies=[
 ('관리자','설정에서 관리자 백오피스 진입','일반 사용자에게 링크 숨김 + 서버 권한 검사'),
 ('나가기','이전에 있던 워크스페이스로 복귀','설정 재진입·로그아웃·공간 전환 없음'),
 ('초기 관리자','dogpoo.net@gmail.com','검증된 기존 계정에 서버에서 지정'),
-('관리 변경','계정 역할·공간별 구독·멤버 역할','마지막 관리자 해제 방지, 변경 이력 기록'),
+('관리 변경','계정 역할·계정 구독·멤버 역할','마지막 관리자 해제 방지, 변경 이력 기록'),
 ('결제','서버 정책만 구현','결제·환불·실제 갱신·웹훅은 미연동'),
 ]
 for row in policies:summary.append(row)
@@ -44,7 +44,7 @@ case('생성','마지막 공간 삭제 후 재로그인·새로고침','빈 공�
 case('생성','초대받은 공간만 남긴 뒤 접속','초대 공간 사용; 소유 수 0',u+'.joinedMembershipsNeverConsumeOwnedQuota')
 case('생성','빈 화면에서 초대 수락','새 기본 공간 없이 초대 공간 진입')
 case('생성','빈 화면에서 새 공간 생성/복원','해당 공간 진입; 로딩 무한 반복 없음')
-case('생성','한도 미정 상태에서 생성','임의의 새 한도 없음',u+'.unspecifiedLimitsRemainUnlimited')
+case('생성','플랜별 활성 소유 공간 제한','Free 2 / Standard 10 / Pro 무제한')
 case('소유 한도','한도 1일 때 1개 소유 후 생성','서버가 거부',u+'.ownedLimitBlocksAdmissionAtBoundary')
 case('소유 한도','두 기기에서 동시에 마지막 생성 자리 사용','한 요청만 성공, 소유 한도 유지',None,priority='P0')
 case('소유 한도','미리보기 후 다른 공간 생성하고 복원','복원 시 한도 재검사')
@@ -53,13 +53,13 @@ case('소유 한도','마지막 소유 공간 이전','이전 허용, 자동 재
 case('소유 한도','구독 만료 후 소유 한도 초과','자료 보존; 우선 공간 외 조회 전용')
 case('소유 한도','사용할 공간 선택 변경','선택 우선순위가 서버에 저장되고 제한 적용')
 case('소유 한도','타인 소유/중복 ID를 선택 API에 전송','서버 거부, 우선순위 원복')
-case('삭제','사용한 Free 공간을 이메일 인증 후 삭제','보관 없이 DB 삭제·파일 삭제 큐',u+'.usedFreeSpaceDeletesPermanentlyAfterVerification',priority='P0')
+case('삭제','사용한 Free 공간을 이메일 인증 후 삭제','30일 보관; 유료 전환 후 복원',u+'.usedFreeSpaceRetainsThirtyDaysAfterVerification',priority='P0')
 case('삭제','사용한 유료 공간을 이메일 인증 후 삭제','30일 보관, 즉시 파일 삭제 안 함',u+'.paidDeletionRetainsThirtyDays',priority='P0')
-case('삭제','생성 직후 미사용 공간 삭제','인증 없이 영구 삭제','WeaverWorkspaceLifecycleTest.unusedSpaceDeletesImmediatelyWithoutMail')
+case('삭제','생성 직후 미사용 공간 삭제','인증 없이 30일 보관')
 case('삭제','메일 인증 없이 사용한 공간 삭제','서버 거부','WeaverWorkspaceLifecycleTest.usedSpaceCannotBypassVerificationEvenAfterEmptyPreview',priority='P0')
 case('삭제','다른 사용자·공간의 인증코드 사용','서버 거부','WeaverWorkspaceLifecycleTest.codeIsBoundToOwnerWorkspaceAndCurrentEmail',priority='P0')
 case('삭제','인증코드 시도 횟수 초과','더 이상 인증 불가','WeaverWorkspaceLifecycleTest.exhaustedAttemptsCannotVerify')
-case('삭제','Free 삭제 모달 표시','복원 불가·즉시 영구 삭제 문구',f+'.free used workspace clearly warns irreversible deletion')
+case('삭제','Free 삭제 모달 표시','30일 보관·유료 복원 문구')
 case('삭제','공유 공간 삭제 후 참여자가 읽기/쓰기','권한 거부, 자료 재생성 없음',None,priority='P0')
 case('삭제','파일 삭제 큐 실패 후 재시도','자료 노출 없이 재시도 처리')
 case('복원','Free 상태의 보관 공간 복원','유료 권한 필요',u+'.restorationRequiresPaidEntitlement')
@@ -70,9 +70,9 @@ case('복원','삭제 보관 중 재구독하고 복원','기존 내용·멤버�
 case('복원','매일 한국 자정 만료 정리','만료 자료만 삭제; 복원과 경합 시 재검사','WeaverWorkspaceLifecycleTest.purgeRechecksDeadlineWhileLocked')
 case('복원','만료된 구독 보관 공간 UI','복원 버튼 비활성화·유료 구독 필요 표시',f+'.expired archived space exposes no enabled restore action')
 case('멤버','무료 계정이 유료 공간 편집자로 참여','공간 플랜의 편집 권한 사용',u+'.paidSpaceAllowsFreeAccountEditorWithUnlimitedPaidSeats')
-case('멤버','Free 공간에서 세 번째 편집자 추가','소유자 포함 2명 제한',u+'.freeHasOwnerAndOneEditor')
+case('멤버','Free 공간에서 초대 요청','오프라인 공간 공유 거부')
 case('멤버','읽기 전용 사용자 여러 명 추가','편집자 자리 소모 없음')
-case('멤버','구독 만료로 편집자 초과','안정된 순서로 허용 인원만 편집, 나머지 조회')
+case('멤버','구독 만료로 편집자 초과','Free 소유 공간은 오프라인 전환, 참여자 접근 중단')
 case('멤버','소유자가 편집자 유지 대상을 선택','초과·외부 계정 거부, 선택 역할 적용',u+'.editorSelectionRejectsOutsidersAndKeepsOwnerSeat')
 case('멤버','만료 전에 발급한 초대 수락','현재 한도 기준 재검사')
 case('멤버','구독 재활성화','기존 설정 역할의 편집 권한 회복')
@@ -89,14 +89,14 @@ case('구독','취소 예약 해제','기간 연장이나 결제 없이 예약�
 case('구독','소유자 아닌 참여자가 취소 요청','권한 거부',u+'.cancellationIsOwnerOnlyAndDoesNotChangeEndDate')
 case('구독','서버 재기동 후 구독 조회','종료일·취소 상태 유지')
 case('구독','유료 기간이 끝난 공간 조회','기존 데이터 접근 유지, 자동 삭제 없음')
-case('구독','동일 계정의 두 공간 중 하나만 플랜 변경','선택 공간만 변경, 다른 공간 불변')
+case('구독','동일 계정의 구독 플랜 변경','소유 공간 전체에 동일 플랜 적용')
 case('관리자','일반 계정으로 관리자 API 직접 호출','조회·권한 변경·구독 변경 거부',u+'.ordinaryUserCannotUseAdminQueriesOrMutations',priority='P0')
 case('관리자','마지막 관리자 해제','서버 거부',u+'.lastAdministratorCannotBeDemoted',priority='P0')
 case('관리자','일반 사용자를 관리자로 지정','지정 및 변경 이력 기록',u+'.administratorRoleChangesAreAudited')
 case('관리자','권한 해제 후 열려 있던 백오피스에서 요청','다음 요청부터 서버 거부')
 case('관리자','계정 검색 후 다른 계정 선택','이메일·소유 공간·구독이 선택 계정 기준')
 case('관리자','구독 종료일을 과거/잘못된 문자열로 지정','서버 거부',u+'.invalidAdminSubscriptionCannotGrantAccess')
-case('관리자','공간 플랜을 Free로 변경','즉시 Free 적용, 본문 보존')
+case('관리자','계정 플랜을 Free로 변경','즉시 Free 적용, 본문 보존')
 case('관리자','관리자가 멤버 역할을 변경','한도 검사·역할 반영·감사 이력')
 case('관리자','멤버 역할 API로 소유자 변경 시도','거부; 소유권 이전 경로 필요')
 case('관리자','감사 이력 확인','행위자·대상·시각·이전/이후 상태 확인',i+'.defaultLimitsRemainUnsetExceptFreeEditorCountAndAdminAuditPersists')
@@ -110,15 +110,34 @@ case('회귀','메모/문서/캔버스 CRUD·다기기 동기화','기존 동작
 case('회귀','게스트 자료 가져오기 후 소유 공간 0개','초대 공간으로 자동 업로드하지 않음')
 case('회귀','문서 충돌 자동/수동 병합','정책 검사와 기존 병합 모두 동작')
 case('회귀','로그아웃·계정 교체 중 관리자 요청 완료','다른 계정으로 관리 데이터 노출 없음')
-for row in rows:ws.append(row)
-settings=wb.create_sheet('플랜 설정');settings.append(['플랜','소유 활성 공간','공간별 bytes','문서 수','편집자 (소유자 포함)','읽기 전용','삭제 보관'])
-settings.append(['Free','미정 / NULL','미정 / NULL','미정 / NULL',2,'제한 없음','없음 / 즉시 영구 삭제'])
-for plan in ['Standard','Pro']:settings.append([plan,'미정 / NULL','미정 / NULL','미정 / NULL','미정 / NULL','제한 없음','30일 (사용한 공간)'])
-settings.append(['운영 상한','별도','기존 64MiB 유지','별도 없음','별도 없음','',''])
+case('생성','Free 생성 후 24시간 이내 삭제·재생성','거부; 삭제로 시간 초기화되지 않음')
+case('생성','Free 생성 후 정확히 24시간 경과','공간 한도 내에서 생성 허용')
+case('오프라인','Free 소유 공간 내용 변경','기기에만 저장, 서버 쓰기 없음')
+case('오프라인','로그아웃 후 다른 계정 로그인','이전 계정의 오프라인 자료 노출 없음')
+case('오프라인','Free 사용자가 초대받은 유료 공간 접속','소유자의 유료 온라인 권한 사용')
+case('오프라인','유료 전환 후 오프라인 자료 존재','확인 후 변경 업로드; 거절/실패 시 로컬 유지')
+case('파일','Free 파일 가져오기','현재 공간만 교체, 다른 공간 및 계정 보존','offline_workspace_test.dart')
+case('파일','손상된 파일 가져오기','기존 자료 유지','offline_workspace_test.dart')
+case('파일','유료 가져오기 직전 다른 기기가 저장','버전 충돌로 거부, 기존 내용 유지')
+case('파일','유료 파일 가져오기','현재 공간 서버·로컬 교체, 다른 공간 불변')
+case('파일','내보낸 첨부 포함 파일 다시 가져오기','메모·문서·배치·음성·사진 복원')
+case('음성','키/ffmpeg 미설정 상태에서 활성화','거부, 비밀 값 노출 없음','WeaverAudioTranscriptionTest')
+case('음성','Free 12초 샘플 변환','10초만 변환, 공급자 모의 호출','WeaverAudioTranscriptionTest')
+case('음성','61초 무료 / 3601초 유료 녹음','기간 초과 거부','WeaverAudioTranscriptionTest')
+case('음성','백오피스 모델 전환','Groq turbo/large 또는 OpenAI mini 저장')
+case('음성','공급자 실제 변환','API키와 변환도구 설정 후 정확도/비용 검증')
+case('메뉴','기록함과 상단 아이콘 위치','핀·모두접기·닫기가 같은 첫 행 오른쪽')
+# Manual cases are never reported as executed. Existing automatic references are
+# evidence pointers, not a substitute for the current run logs.
+for row in rows:
+ if row[6]=='자동': row[7]='미실행';row[10]=''
+ ws.append(row)
+settings=wb.create_sheet('플랜 설정');settings.append(['플랜','소유 활성 공간','공간별 bytes','문서 수','편집자','모드','삭제 보관'])
+for plan,count,mode in [('Free',2,'오프라인'),('Standard',10,'온라인'),('Pro','무제한','온라인')]:settings.append([plan,count,'미정 / NULL','미정 / NULL','Free 공유 중단 / 유료 미정',mode,'30일, 유료만 복원'])
 results=wb.create_sheet('검증 결과');results.append(['검증','상태','범위·한계'])
-for row in [('정책 단위 테스트 19개','통과','인증·무료/유료 삭제·한도·취소·관리자 보호'),('MariaDB 정책 통합 테스트 3개','통과','실제 SQL·UTC 만료·취소일 유지·최초 생성·기본 설정'),('관련 Flutter 테스트 28개','통과','백오피스 나가기·권한 오류·삭제 문구·기존 워크스페이스 UI'),('브라우저/실제 기기 수동 검증','미실행','테스트 케이스의 미실행 항목을 별도로 수행'),('실제 결제·환불·웹훅','미구현','사용자 요청 범위는 서버 구독 정책까지'),('운영 플랜 숫자/가격','미정','임의로 한도를 정하지 않음')]:results.append(row)
+for row in [('백엔드 자동 테스트','118 통과 / 31 조건부 제외','총 149; MariaDB 정책 4개·음성 모의 4개·가져오기 방어 3개 포함'),('Flutter 관련 테스트','32 통과','정적 분석도 통과; 실제 기기 수동 검증은 별도'),('브라우저/실제 기기 수동 검증','미실행','실제 기기 및 UI 수동 검증 필요'),('실제 결제·환불·웹훅','미구현','서버 구독 정책만 구현'),('실제 음성 공급자 호출','미실행','키·ffmpeg 설정 필요; 합성 음원과 모의 응답만 테스트'),('운영 가격·저장/문서 한도','미정','소유 공간 한도 2/10/무제한은 확정')]:results.append(row)
 ops=wb.create_sheet('운영 가이드');ops.append(['항목','내용'])
-for row in [('관리 화면','관리자 계정 → 설정 → 관리자 백오피스'),('나가기','이전에 사용하던 워크스페이스로 복귀'),('구독 변경','계정 검색 → 소유 공간 선택 → 플랜·구독 상태 변경'),('유료 종료일','시간대 포함 ISO 형식 (예: 2027-01-01T00:00:00+09:00)'),('초기 관리자','dogpoo.net@gmail.com'),('한도 설정','WEAVER_PLAN_POLICY의 nullable limit 컬럼. 숫자는 확정 후 변경'),('보관 정리','매일 00:00 Asia/Seoul; 복원 유효기간 검사는 요청 시 수행'),('비밀정보','엑셀에 비밀번호·API키·실제 사용자 본문을 기록하지 말 것'),('수동 검증','테스트용 계정/공간을 이용하고 운영 자료 삭제 금지'),('반복 생성','tool/generate_policy_tests.py'),('명세','docs/workspace-subscription-policy.md')]:ops.append(row)
+for row in [('관리 화면','관리자 → 설정 → 백오피스'),('나가기','이전에 사용하던 워크스페이스로 복귀'),('구독 변경','계정 검색 → 계정 구독 변경 → 소유 공간 전체 적용'),('초기 관리자','dogpoo.net@gmail.com'),('보관 정리','매일 00:00 Asia/Seoul; 30일 만료 삭제'),('로컬 백업','Free 기기 자료는 서버 보관으로 복구되지 않음. 파일 백업 필요'),('음성','GROQ_API_KEY / OPENAI_API_KEY 및 ffmpeg·ffprobe 필요'),('비밀정보','키·비밀번호·사용자 본문을 엑셀에 기록하지 말 것'),('수동 검증','테스트용 계정·공간만 사용'),('명세','docs/workspace-subscription-policy.md, docs/audio-transcription.md')]:ops.append(row)
 for sheet in wb:
  sheet.freeze_panes='A2';sheet.auto_filter.ref=sheet.dimensions
  sheet.sheet_view.showGridLines=False

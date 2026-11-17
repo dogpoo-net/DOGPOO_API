@@ -50,6 +50,12 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   long revision=lock(id,email);permissions.access(actor,id,true);
   long beforeBytes=mapper.itemBytes(id)+mapper.mediaBytes(id);long beforePolicyBytes=policy==null?0:policy.bytes(id),beforeDocuments=policy==null?0:policy.documents(id);
   if(request.changes==null || request.changes.size()>20000)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"항목 수가 너무 많습니다.");
+  if(request.replaceContents){
+   if(importing||request.documentMerge||request.canvasOperationId!=null||request.resourceId!=null||!actor.equals(mapper.owner(id)))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 현재 워크스페이스 전체를 가져올 수 있습니다.");
+   if(request.since!=revision)throw new ResponseStatusException(HttpStatus.CONFLICT,"서버 자료가 변경되었습니다. 다시 가져오기를 확인해주세요.");
+   var keys=new HashSet<String>();for(var c:request.changes)keys.add(key(c.kind,c.id));
+   if(mapper.changes(id,0).stream().anyMatch(c->!c.deleted()&&!keys.contains(key(c.kind(),c.id()))))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"현재 워크스페이스의 전체 자료를 확인해야 합니다.");
+  }
   boolean canvas=request.canvasOperationId!=null;
   String canvasHash=null;
   if(canvas){
@@ -78,7 +84,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   if(request.resourceId!=null && request.resourceId.startsWith("canvas:"))throw new ResponseStatusException(HttpStatus.CONFLICT,"캔버스 자동 저장을 사용하려면 앱을 새로고침해주세요.");
   if(request.resourceId!=null && !request.documentMerge)throw new ResponseStatusException(HttpStatus.CONFLICT,"문서 병합 저장을 사용하려면 앱을 새로고침해주세요.");
   // Box membership is an operation on IDs, not replacement of another user's list.
-  if(!importing && !canvas)mergeBoxChanges(id,request);
+  if(!importing && !canvas && !request.replaceContents)mergeBoxChanges(id,request);
   var removedMedia=new HashSet<String>();
   var seen=new HashSet<String>();
   for(var change:request.changes){valid(change.kind,change.id);String key=key(change.kind,change.id);if(!seen.add(key))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"중복 항목입니다.");
