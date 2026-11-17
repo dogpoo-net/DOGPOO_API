@@ -9,6 +9,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  @org.springframework.beans.factory.annotation.Autowired private WeaverHistoryService history;
  @org.springframework.beans.factory.annotation.Autowired private WeaverSharingService permissions;
  @org.springframework.beans.factory.annotation.Autowired private WeaverDocumentLockMapper documentLocks;
+ @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspacePolicyService policy;
  private final WeaverWorkspaceMapper mapper;private final WeaverTestDataMapper legacy;private final ObjectMapper json=new ObjectMapper();private final long maxBytes;private final Path resourceRoot;
  public WeaverWorkspaceService(WeaverWorkspaceMapper mapper,WeaverTestDataMapper legacy,@Value("${WEAVER_WORKSPACE_MAX_BYTES:67108864}") long maxBytes,@Value("${WEAVER_RESOURCE_DIR:/home/ocaptain/resource}") String resourceRoot){this.mapper=mapper;this.legacy=legacy;this.maxBytes=maxBytes;this.resourceRoot=Path.of(resourceRoot).toAbsolutePath().normalize();}
  private String key(String kind,String id){return WeaverAuthService.hash(kind+"\n"+id);}
@@ -47,6 +48,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  @Transactional public Map<String,Object> save(String id,String email,WeaverWorkspaceRequest request,boolean importing){return save(id,email,id,request,importing);}
  @Transactional public Map<String,Object> save(String id,String email,String actor,WeaverWorkspaceRequest request,boolean importing){
   long revision=lock(id,email);permissions.access(actor,id,true);
+  long beforeBytes=mapper.itemBytes(id)+mapper.mediaBytes(id);long beforePolicyBytes=policy==null?0:policy.bytes(id),beforeDocuments=policy==null?0:policy.documents(id);
   if(request.changes==null || request.changes.size()>20000)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"항목 수가 너무 많습니다.");
   boolean canvas=request.canvasOperationId!=null;
   String canvasHash=null;
@@ -108,7 +110,8 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   }
   if(canvas)mapper.canvasReceiptPut(id,request.canvasOperationId,canvasHash);
   removeUnreferencedMedia(id,removedMedia);
-  quota(id);if(events!=null && !request.changes.isEmpty())events.changedAfterCommit(id);if(importing)return result(id,0,revision);
+  if(policy!=null)policy.validateSave(id,request.changes,beforePolicyBytes,beforeDocuments);
+  if(mapper.itemBytes(id)+mapper.mediaBytes(id)>beforeBytes)quota(id);if(events!=null && !request.changes.isEmpty())events.changedAfterCommit(id);if(importing)return result(id,0,revision);
   return Map.of("revision",revision,"changes",request.changes.stream().map(c->mapper.item(id,key(c.kind,c.id))).toList());
  }
  private void mergeBoxChanges(String workspace,WeaverWorkspaceRequest request){
@@ -214,6 +217,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
    String key=WeaverAuthService.hash(id),hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(data));
    var old=mapper.media(user,key);
    if(old!=null){if(!old.hash().equals(hash) || !old.type().equals(type))throw new ResponseStatusException(HttpStatus.CONFLICT,"첨부파일 식별자가 충돌했습니다.");return;}
+   if(policy!=null)policy.validateMedia(user,data.length);
    if(mapper.itemBytes(user)+mapper.mediaBytes(user)+history.bytes(user)+data.length>maxBytes)throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,"워크스페이스 저장 한도를 초과했습니다.");
    Path directory=resourceRoot.resolve("contents/note").resolve(type).resolve(user);Files.createDirectories(directory);
    Path file=directory.resolve(key+"-"+UUID.randomUUID()+".bin"),temp=Files.createTempFile(directory,".upload-",".tmp");

@@ -9,6 +9,7 @@ import net.dogpoo.api.core.weaver.mapper.*;
 import net.dogpoo.api.core.weaver.model.*;
 @Service
 public class WeaverSocialAccountService {
+ @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspacePolicyService policy;
  @org.springframework.beans.factory.annotation.Autowired private WeaverProfileMapper profiles;
  private final WeaverAuthMapper accounts;
  private final WeaverSessionMapper sessions;
@@ -36,6 +37,7 @@ public class WeaverSocialAccountService {
   // A social-only account has an unknowable password; no provider token is stored.
   accounts.insertAccount(id,profile.email(),encoder.encode(UUID.randomUUID()+UUID.randomUUID().toString()),profile.name());
   accounts.signupProvider(id,profile.provider());
+  if(policy!=null)policy.initializeAccount(id);
   profiles.ensure(id);profiles.email(id,false);
   social.verified(id);social.link(profile.provider(),profile.subject(),id);social.email(profile.provider(),profile.subject(),email);avatar(id,profile);return sessions.account(id);
  }

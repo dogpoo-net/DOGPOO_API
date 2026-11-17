@@ -1,0 +1,28 @@
+package net.dogpoo.api.core.weaver.mapper;
+import java.util.*;
+import org.apache.ibatis.annotations.*;
+@Mapper public interface WeaverPolicyMapper {
+ String EFFECTIVE="COALESCE((SELECT s.plan FROM WEAVER_WORKSPACE_SUBSCRIPTION s WHERE s.workspace_id=w.user_id AND s.period_end>UTC_TIMESTAMP(6)), 'free')";
+ @Select("SELECT p.* FROM WEAVER_ACCOUNT_WORKSPACE w JOIN WEAVER_PLAN_POLICY p ON p.code="+EFFECTIVE+" WHERE w.user_id=#{id}") Map<String,Object> plan(String id);
+ @Select("SELECT * FROM WEAVER_PLAN_POLICY ORDER BY FIELD(code,'free','standard','pro')") List<Map<String,Object>> plans();
+ @Select("SELECT w.user_id AS workspaceId,w.owner_id AS ownerId,w.name,w.archived_at AS archivedAt,"+EFFECTIVE+" AS plan FROM WEAVER_ACCOUNT_WORKSPACE w WHERE w.owner_id=#{id} ORDER BY w.edit_priority DESC,w.user_id") List<Map<String,Object>> owned(String id);
+ @Select("SELECT s.plan,DATE_FORMAT(s.period_end,'%Y-%m-%dT%H:%i:%s.%fZ') AS periodEnd,s.cancel_at_end AS cancelAtEnd,(s.period_end>UTC_TIMESTAMP(6)) AS active FROM WEAVER_WORKSPACE_SUBSCRIPTION s WHERE workspace_id=#{id}") Map<String,Object> subscription(String id);
+ @Insert("INSERT INTO WEAVER_WORKSPACE_SUBSCRIPTION(workspace_id,plan,period_end,cancel_at_end) VALUES(#{id},#{plan},#{end},#{cancel}) ON DUPLICATE KEY UPDATE plan=VALUES(plan),period_end=VALUES(period_end),cancel_at_end=VALUES(cancel_at_end),updated_at=UTC_TIMESTAMP(6)") void subscribe(@Param("id")String id,@Param("plan")String plan,@Param("end")java.time.LocalDateTime end,@Param("cancel")boolean cancel);
+ @Delete("DELETE FROM WEAVER_WORKSPACE_SUBSCRIPTION WHERE workspace_id=#{id}") void free(String id);
+ @Update("UPDATE WEAVER_WORKSPACE_SUBSCRIPTION SET cancel_at_end=#{cancel},updated_at=UTC_TIMESTAMP(6) WHERE workspace_id=#{id} AND period_end>UTC_TIMESTAMP(6)") int cancel(@Param("id")String id,@Param("cancel")boolean cancel);
+ @Select("SELECT COALESCE(SUM(payload_bytes),0)+(SELECT COALESCE(SUM(byte_size),0) FROM WEAVER_WORKSPACE_MEDIA WHERE user_id=#{id}) FROM WEAVER_WORKSPACE_ITEM WHERE user_id=#{id} AND deleted=FALSE") long bytes(String id);
+ @Select("SELECT COUNT(*) FROM WEAVER_WORKSPACE_ITEM WHERE user_id=#{id} AND kind='list:notes' AND deleted=FALSE") long documents(String id);
+ @Select("SELECT user_id FROM WEAVER_WORKSPACE_MEMBER WHERE workspace_id=#{id} AND role='editor' ORDER BY joined_at,user_id") List<String> editors(String id);
+ @Update("UPDATE WEAVER_ACCOUNT_WORKSPACE SET edit_priority=#{priority} WHERE user_id=#{id} AND owner_id=#{owner}") int priority(@Param("id")String id,@Param("owner")String owner,@Param("priority")int priority);
+ @Insert("INSERT IGNORE INTO WEAVER_ACCOUNT_PROVISION(user_id) VALUES(#{id})") int provision(String id);
+ @Select("SELECT COUNT(*) FROM WEAVER_ACCOUNT_PROVISION WHERE user_id=#{id}") int provisioned(String id);
+ @Select("SELECT platform_role FROM WEAVER_USER_ACCOUNT WHERE id=#{id}") String platformRole(String id);
+ @Select("SELECT code FROM WEAVER_PLAN_POLICY WHERE code='free' FOR UPDATE") String lockAdmin();
+ @Select("SELECT COUNT(*) FROM WEAVER_USER_ACCOUNT WHERE platform_role='admin'") int admins();
+ @Update("UPDATE WEAVER_USER_ACCOUNT SET platform_role=#{role} WHERE id=#{id}") int platformRoleSet(@Param("id")String id,@Param("role")String role);
+ @Select("SELECT id,email,display_name AS name,platform_role AS platformRole FROM WEAVER_USER_ACCOUNT WHERE verified_at IS NOT NULL AND (email LIKE CONCAT(#{query},'%') ESCAPE '!' OR id=#{query}) ORDER BY email LIMIT 30") List<Map<String,Object>> users(String query);
+ @Select("SELECT id,email,display_name AS name,platform_role AS platformRole FROM WEAVER_USER_ACCOUNT WHERE id=#{id}") Map<String,Object> user(String id);
+ @Insert("INSERT INTO WEAVER_POLICY_AUDIT(actor_id,action,target_id,details) VALUES(#{actor},#{action},#{target},#{details})") void audit(@Param("actor")String actor,@Param("action")String action,@Param("target")String target,@Param("details")String details);
+ @Select("SELECT id,actor_id AS actorId,action,target_id AS targetId,details,DATE_FORMAT(created_at,'%Y-%m-%dT%H:%i:%s.%fZ') AS createdAt FROM WEAVER_POLICY_AUDIT ORDER BY id DESC LIMIT 100") List<Map<String,Object>> auditList();
+ @Update("UPDATE WEAVER_PLAN_POLICY SET owned_limit=#{owned},storage_limit=#{storage},document_limit=#{documents},editor_limit=#{editors} WHERE code=#{plan}") int limits(@Param("plan")String plan,@Param("owned")Long owned,@Param("storage")Long storage,@Param("documents")Long documents,@Param("editors")Long editors);
+}

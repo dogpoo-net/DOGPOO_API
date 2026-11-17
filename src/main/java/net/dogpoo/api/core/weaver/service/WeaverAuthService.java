@@ -13,6 +13,7 @@ import net.dogpoo.api.core.weaver.model.*;
 
 @Service
 public class WeaverAuthService {
+ @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspacePolicyService policy;
  @org.springframework.beans.factory.annotation.Autowired(required=false) private net.dogpoo.api.core.weaver.mapper.WeaverProfileMapper profiles;
  private final WeaverAuthMapper mapper;
  private final PasswordEncoder encoder;
@@ -61,6 +62,7 @@ public class WeaverAuthService {
   String id=UUID.randomUUID().toString();
   mapper.insertAccount(id,email,hash,name(request.name));
   mapper.signupProvider(id,"email");
+  if(policy!=null)policy.initializeAccount(id);
   send(id,email);
  }
  @Transactional

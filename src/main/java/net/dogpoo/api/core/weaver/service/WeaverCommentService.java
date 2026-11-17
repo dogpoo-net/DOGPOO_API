@@ -8,6 +8,7 @@ import net.dogpoo.api.core.weaver.mapper.*;
 import net.dogpoo.api.core.weaver.model.*;
 @Service public class WeaverCommentService {
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceEvents events;
+ @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspacePolicyService policy;
  private final WeaverCommentMapper comments;private final WeaverSharingService sharing;private final WeaverSessionMapper accounts;
  public WeaverCommentService(WeaverCommentMapper comments,WeaverSharingService sharing,WeaverSessionMapper accounts){this.comments=comments;this.sharing=sharing;this.accounts=accounts;}
  public Map<String,Long> counts(String workspace){var result=new HashMap<String,Long>();for(var row:comments.counts(workspace))result.put((String)row.get("memoId"),((Number)row.get("total")).longValue());return result;}
@@ -16,6 +17,7 @@ import net.dogpoo.api.core.weaver.model.*;
   if(r.memoId==null || r.memoId.isBlank() || r.memoId.length()>512 || r.beforeId<1)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"메모 정보가 올바르지 않습니다.");
   if(comments.exists(target.id(),r.memoId)==0)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"서버에 저장된 메모가 없습니다. 메모를 저장한 뒤 다시 시도해주세요.");
   if(write){
+   if(policy!=null)policy.requireWrite(target.id());
    String content=r.content==null?"":r.content.strip();
    if(content.isEmpty() || content.codePointCount(0,content.length())>4000 || r.requestId==null || !r.requestId.matches("[a-fA-F0-9-]{36}"))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"댓글은 1~4000자로 입력해주세요.");
    var user=accounts.account(actor);if(user==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);WeaverAuthService.name(user.displayName());

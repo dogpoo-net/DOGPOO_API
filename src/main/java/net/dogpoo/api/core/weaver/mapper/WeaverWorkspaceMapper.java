@@ -6,7 +6,7 @@ import net.dogpoo.api.core.weaver.model.WeaverMediaFile;
  @Select("SELECT request_hash FROM WEAVER_CANVAS_OPERATION_RECEIPT WHERE workspace_id=#{workspace} AND operation_id=#{operation}") String canvasReceipt(@Param("workspace") String workspace,@Param("operation") String operation);
  @Insert("INSERT INTO WEAVER_CANVAS_OPERATION_RECEIPT(workspace_id,operation_id,request_hash) VALUES(#{workspace},#{operation},#{hash})") void canvasReceiptPut(@Param("workspace") String workspace,@Param("operation") String operation,@Param("hash") String hash);
 
- @Insert("INSERT IGNORE INTO WEAVER_ACCOUNT_WORKSPACE(user_id,owner_id,name) SELECT id,id,'기본 워크스페이스' FROM WEAVER_USER_ACCOUNT WHERE id=#{id} AND NOT EXISTS (SELECT 1 FROM WEAVER_WORKSPACE_DELETION WHERE workspace_id=#{id})") int ensure(String id);
+ @Insert("INSERT IGNORE INTO WEAVER_ACCOUNT_WORKSPACE(user_id,owner_id,name) SELECT id,id,'기본 워크스페이스' FROM WEAVER_USER_ACCOUNT WHERE id=#{id} AND NOT EXISTS (SELECT 1 FROM WEAVER_ACCOUNT_PROVISION WHERE user_id=#{id}) AND NOT EXISTS (SELECT 1 FROM WEAVER_WORKSPACE_DELETION WHERE workspace_id=#{id})") int ensure(String id);
  @Select("SELECT id FROM WEAVER_USER_ACCOUNT WHERE id=#{id} FOR UPDATE") String lockAccountId(String id);
  @Select("SELECT owner_id FROM WEAVER_ACCOUNT_WORKSPACE WHERE user_id=#{id}") String owner(String id);
  @Select("SELECT user_id AS workspaceId,'owner' AS role,COALESCE(name,'내 워크스페이스') AS name FROM WEAVER_ACCOUNT_WORKSPACE WHERE owner_id=#{id} AND archived_at IS NULL ORDER BY (user_id=#{id}) DESC,user_id") List<Map<String,Object>> owned(String id);
