@@ -9,7 +9,7 @@ class WeaverWithdrawalServiceTest {
  @BeforeEach void setup(){
   var account=mock(WeaverAccount.class);when(account.email()).thenReturn("delete@example.invalid");when(accounts.account("user")).thenReturn(account);
   when(deletion.verify(eq("user"),anyString())).thenReturn(1);when(deletion.deleteAccount("user")).thenReturn(1);
-  when(workspaces.owned("user")).thenReturn(List.of(Map.of("workspaceId","space","role","owner")));when(workspaces.owner("space")).thenReturn("user");
+  when(workspaces.ownedIncludingArchived("user")).thenReturn(List.of(Map.of("workspaceId","space","role","owner")));when(workspaces.owner("space")).thenReturn("user");
  }
  WeaverWithdrawalRequest request(){var r=new WeaverWithdrawalRequest();r.code="12345678";r.confirmed=true;return r;}
  @Test void everyOwnedWorkspaceRequiresExplicitTransferOrDeletion(){

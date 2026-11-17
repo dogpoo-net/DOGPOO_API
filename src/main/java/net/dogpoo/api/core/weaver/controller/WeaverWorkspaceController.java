@@ -15,6 +15,7 @@ public class WeaverWorkspaceController {
  @org.springframework.beans.factory.annotation.Autowired private WeaverAuthRateLimit limits;
  @org.springframework.beans.factory.annotation.Autowired private WeaverCommentService comments;
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceEvents events;
+ @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceLifecycleService lifecycle;
  private final WeaverSessionService sessions; private final WeaverWorkspaceService workspaces; private final String origin;
  public WeaverWorkspaceController(WeaverSessionService sessions,WeaverWorkspaceService workspaces,@Value("${WEAVER_WEB_ORIGIN:https://weaver.dogpoo.net}") String origin){this.sessions=sessions;this.workspaces=workspaces;this.origin=origin;}
  private Map<String,Object> account(String platform,HttpServletRequest r){
@@ -49,10 +50,17 @@ public class WeaverWorkspaceController {
  @PostMapping("/create-workspace") public Map<String,Object> createWorkspace(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){String user=(String)account(platform,r).get("id");limits.check("create-workspace:"+user,10);return sharing.createWorkspace(user,request.name);}
  @PostMapping({"/rename-workspace","/delete-workspace","/leave-workspace"}) public Map<String,Object> manageWorkspace(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){String user=(String)account(platform,r).get("id");
   if(r.getRequestURI().endsWith("/rename-workspace"))sharing.renameWorkspace(user,request.workspaceId,request.name);
-  else if(r.getRequestURI().endsWith("/delete-workspace"))sharing.deleteWorkspace(user,request.workspaceId);
+  else if(r.getRequestURI().endsWith("/delete-workspace")){
+   if(request.code!=null && !lifecycle.verify(user,request.workspaceId,request.code))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"인증코드가 올바르지 않거나 만료되었습니다.");
+   return lifecycle.delete(user,request.workspaceId,request.code);
+  }
   else sharing.leaveWorkspace(user,request.workspaceId);
   return Map.of("updated",true);
  }
+ @PostMapping("/delete-workspace-preview") public Map<String,Object> deletionPreview(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){return lifecycle.preview((String)account(platform,r).get("id"),request.workspaceId);}
+ @PostMapping("/delete-workspace-email") public Map<String,Object> deletionEmail(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){String user=(String)account(platform,r).get("id");limits.check("workspace-delete-mail:"+user,3);lifecycle.request(user,request.workspaceId);return Map.of("sent",true);}
+ @PostMapping("/deleted-workspaces") public Map<String,Object> deletedWorkspaces(@PathVariable String platform,HttpServletRequest r){return lifecycle.archived((String)account(platform,r).get("id"));}
+ @PostMapping("/restore-workspace") public Map<String,Object> restoreWorkspace(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){lifecycle.restore((String)account(platform,r).get("id"),request.workspaceId);return Map.of("restored",true);}
  @PostMapping("/members") public Map<String,Object> members(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){var u=account(platform,r);String user=(String)u.get("id");return sharing.list(user,request.workspaceId==null?sharing.primary(user):request.workspaceId);}
  @PostMapping("/invite") public Map<String,Object> invite(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){var u=account(platform,r);String user=(String)u.get("id");limits.check("invite:"+user,5);var result=new HashMap<>(sharing.invite(user,request.workspaceId==null?sharing.primary(user):request.workspaceId,request.email,request.role));boolean sent=true;try{mail.invite((String)result.get("email"),(String)result.get("token"),(String)result.get("role"));}catch(ResponseStatusException e){sent=false;}result.put("mailSent",sent);return result;}
  @PostMapping("/accept") public Map<String,Object> accept(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){var u=account(platform,r);return sharing.accept((String)u.get("id"),(String)u.get("email"),request.token,request.inviteId);}

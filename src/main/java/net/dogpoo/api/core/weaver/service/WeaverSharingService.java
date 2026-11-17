@@ -4,18 +4,18 @@ import org.springframework.stereotype.Service;import org.springframework.transac
 import org.springframework.http.HttpStatus;import org.springframework.web.server.ResponseStatusException;
 import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.model.*;
 @Service public class WeaverSharingService {
- @org.springframework.beans.factory.annotation.Autowired private WeaverWithdrawalMapper deletion;
  private final WeaverWorkspaceMapper workspaces;private final WeaverSharingMapper members;private final WeaverSessionMapper accounts;
  public WeaverSharingService(WeaverWorkspaceMapper workspaces,WeaverSharingMapper members,WeaverSessionMapper accounts){this.workspaces=workspaces;this.members=members;this.accounts=accounts;}
  public record Access(String id,String email,String role){}
  @Transactional public Access access(String user,String workspace,boolean write){
   String target=workspace==null || workspace.isBlank()?primary(user):workspace;
   if(target.equals(user))workspaces.ensure(user);
+  if(workspaces.archived(target))throw new ResponseStatusException(HttpStatus.GONE,"삭제된 워크스페이스입니다.");
   String role=user.equals(workspaces.owner(target))?"owner":members.role(target,user);
   if(role==null || (write && role.equals("viewer")))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"이 워크스페이스를 편집할 권한이 없습니다.");
   var owner=accounts.account(workspaces.owner(target));if(owner==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);return new Access(target,owner.email(),role);
  }
- private void lockOwner(String user,String workspace){workspaces.ensure(workspace);workspaces.lock(workspace);if(!user.equals(workspaces.owner(workspace)))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 참여자를 관리할 수 있습니다.");}
+ private void lockOwner(String user,String workspace){workspaces.ensure(workspace);workspaces.lock(workspace);if(workspaces.archived(workspace))throw new ResponseStatusException(HttpStatus.GONE);if(!user.equals(workspaces.owner(workspace)))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 참여자를 관리할 수 있습니다.");}
  private String role(String role){if(!List.of("editor","viewer").contains(role==null?"":role))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"편집자 또는 읽기 전용 역할을 선택해주세요.");return role;}
  private void available(String workspace){if(1+members.editors(workspace)+members.reserved(workspace)>=2)throw new ResponseStatusException(HttpStatus.CONFLICT,"무료 워크스페이스는 소유자 포함 편집자 2명까지입니다. 대기 중인 편집자 초대도 자리를 예약합니다.");}
  @Transactional public String primary(String user){
@@ -34,20 +34,17 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  }
  @Transactional public Map<String,Object> createWorkspace(String user,String name){
   name=workspaceName(name);workspaces.lockAccountId(user);
-  String id=UUID.randomUUID().toString();workspaces.create(id,user);workspaces.rename(id,name);
+  String id=UUID.randomUUID().toString();workspaces.create(id,user);workspaces.initializeName(id,name);
   return Map.of("workspaceId",id);
  }
  private void existingOwner(String user,String workspace){
   if(workspace==null || workspaces.revision(workspace)==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"워크스페이스를 찾을 수 없습니다.");
   workspaces.lock(workspace);
+  if(workspaces.archived(workspace))throw new ResponseStatusException(HttpStatus.GONE);
   if(!user.equals(workspaces.owner(workspace)))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 관리할 수 있습니다.");
  }
  @Transactional public void renameWorkspace(String user,String workspace,String name){
   name=workspaceName(name);existingOwner(user,workspace);workspaces.rename(workspace,name);
- }
- @Transactional public void deleteWorkspace(String user,String workspace){
-  workspaces.lockAccountId(user);existingOwner(user,workspace);
-  workspaces.tombstone(workspace);deletion.enqueue(workspace,"workspace");workspaces.deleteWorkspace(workspace);
  }
  @Transactional public void leaveWorkspace(String user,String workspace){
   if(workspace==null || workspaces.revision(workspace)==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -60,7 +57,9 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  @Transactional public void transfer(String user,String workspace,String recipient){transferInternal(user,workspace,recipient,true);}
  @Transactional public void transferForWithdrawal(String user,String workspace,String recipient){transferInternal(user,workspace,recipient,false);}
  private void transferInternal(String user,String workspace,String recipient,boolean keepFormerOwner){
-  lockOwner(user,workspace);
+  if(keepFormerOwner){lockOwner(user,workspace);}else{
+   workspaces.lock(workspace);if(!user.equals(workspaces.owner(workspace)))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+  }
   if(user.equals(recipient) || members.role(workspace,recipient)==null)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"현재 참여자에게만 소유권을 이전할 수 있습니다.");
   if(accounts.account(recipient)==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
   if(keepFormerOwner && "viewer".equals(members.role(workspace,recipient)) && 1+members.editors(workspace)+members.reserved(workspace)>=2)throw new ResponseStatusException(HttpStatus.CONFLICT,"편집자 자리를 먼저 정리해주세요.");
@@ -78,7 +77,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED) public Map<String,Object> accept(String user,String email,String token,String inviteId){
   String id=token==null?inviteId:members.token(WeaverAuthService.hash(token));if(id==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"초대를 찾을 수 없습니다.");
   var invite=members.invite(id);if(invite==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-  String workspace=(String)invite.get("workspaceId");workspaces.ensure(workspace);workspaces.lock(workspace);invite=members.invite(id);
+  String workspace=(String)invite.get("workspaceId");workspaces.ensure(workspace);workspaces.lock(workspace);if(workspaces.archived(workspace))throw new ResponseStatusException(HttpStatus.GONE);invite=members.invite(id);
   if(!email.equals(invite.get("email")))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"초대받은 이메일 계정으로 로그인해주세요.");
   if("accepted".equals(invite.get("status")) && members.role(workspace,user)!=null)return Map.of("workspaceId",workspace);
   if(!"pending".equals(invite.get("status")) || !(Boolean.TRUE.equals(invite.get("valid")) || (invite.get("valid") instanceof Number n && n.intValue()==1)))throw new ResponseStatusException(HttpStatus.GONE,"만료되었거나 취소된 초대입니다.");
