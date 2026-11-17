@@ -32,7 +32,7 @@ class WeaverItemContentIntegrationTest {
    assertEquals(4,mapper.changes("legacy",4).size());
    long bytes=rows.stream().filter(r->!r.deleted()).mapToLong(r->r.payload().getBytes(StandardCharsets.UTF_8).length).sum();
    assertEquals(bytes,mapper.itemBytes("legacy"));assertEquals(2,mapper.attachmentRecords("legacy").size());
-   assertEquals(0,count(session,"SELECT COUNT(*) FROM WEAVER_WORKSPACE_ITEM WHERE payload IS NOT NULL"));
+   assertEquals(0,count(session,"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='WEAVER_WORKSPACE_ITEM' AND COLUMN_NAME='payload'"));
   }
  }
  @Test void mapperRoutesAllTypesDeletesRestoresRollsBackAndCascades()throws Exception{

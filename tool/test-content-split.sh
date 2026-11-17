@@ -8,8 +8,12 @@ mysql_test(){ docker exec -i "$container" mariadb --default-character-set=utf8mb
 mysql_test < src/test/resources/weaver/content-split-fixture.sql
 mysql_test < docs/sql/023-weaver-item-content-split.sql
 mysql_test < docs/sql/023-weaver-item-content-split.sql
+mysql_test < docs/sql/024-weaver-remove-legacy-payload.sql
+mysql_test < docs/sql/024-weaver-remove-legacy-payload.sql
 WEAVER_SPLIT_TEST_URL=jdbc:mariadb://127.0.0.1:33317/weaver_split mvn -q -o -Dmaven.repo.local=/workspace/.m2 -Dtest=WeaverItemContentIntegrationTest test
 # Explicit rollback then re-migrate to prove deploy recovery preserves content.
 mysql_test < docs/sql/023-weaver-item-content-rollback.sql
 mysql_test < docs/sql/023-weaver-item-content-split.sql
+mysql_test < docs/sql/024-weaver-remove-legacy-payload.sql
+mysql_test < docs/sql/024-weaver-remove-legacy-payload.sql
 WEAVER_SPLIT_TEST_URL=jdbc:mariadb://127.0.0.1:33317/weaver_split mvn -q -o -Dmaven.repo.local=/workspace/.m2 -Dtest=WeaverItemContentIntegrationTest test

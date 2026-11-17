@@ -18,8 +18,8 @@ This is a bounded vertical/domain split, not a claim that all JSON has been norm
 Each content table has a `(workspace_id,item_key)` primary key and cascading foreign key
 to the sync index. Workspace/account deletion consequently deletes content as before.
 Metadata, comments, files, membership and document history remain in their dedicated tables.
-The legacy `payload` column remains NULL only to support explicit rollback; the new API never
-reads it. Contents retain their existing JSON representation to avoid loss of client fields.
+Migration 024 removes the legacy `payload` column after verifying that it is empty.
+The rollback script recreates that column before restoring the old content format. Contents retain their existing JSON representation to avoid loss of client fields.
 Further field normalization should follow concrete query requirements.
 
 ## Read/write behavior
@@ -42,7 +42,7 @@ Further field normalization should follow concrete query requirements.
 3. Execute `023-weaver-item-content-split.sql` through the existing server-local DB helper.
    DDL is idempotent. Backfill, binary-content comparison and clearing legacy payloads are
    one transaction. On mismatch the procedure rolls back and raises an error.
-4. Install the new jar and start the service. Inspect DB integrity summaries, not payloads.
+4. Install the new jar, execute `024-weaver-remove-legacy-payload.sql`, and start the service. Inspect DB integrity summaries, not payloads.
 5. If application deployment fails, stop the service, run
    `023-weaver-item-content-rollback.sql`, restore the prior jar, then start it.
    Do not run the old jar against empty legacy payloads.
