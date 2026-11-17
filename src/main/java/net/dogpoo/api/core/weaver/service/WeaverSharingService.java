@@ -66,8 +66,16 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   members.remove(workspace,recipient);if(keepFormerOwner)members.join(workspace,user,"editor");workspaces.transfer(workspace,recipient);
  }
  public Map<String,Object> list(String user,String workspace){var target=access(user,workspace,false);var owner=accounts.account(workspaces.owner(target.id()));var list=new ArrayList<Map<String,Object>>();var item=new HashMap<String,Object>();item.put("userId",owner.id());item.put("role","owner");item.put("name",owner.displayName()==null?"소유자":owner.displayName());item.put("email",owner.email());list.add(item);list.addAll(members.members(target.id()));return Map.of("members",list,"invitations",target.role().equals("owner")?members.invitations(target.id()):List.of(),"editorLimit",2);}
+ public List<String> emailSuggestions(String user,String workspace,String query){
+  var target=access(user,workspace,false);
+  if(!"owner".equals(target.role()))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+  String prefix=query==null?"":query.strip().toLowerCase(Locale.ROOT);
+  if(prefix.length()<2 || prefix.length()>254)return List.of();
+  return members.emailSuggestions(prefix.replace("!","!!").replace("%","!%").replace("_","!_"));
+ }
  @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED) public Map<String,Object> invite(String user,String workspace,String email,String role){
   lockOwner(user,workspace);role=role(role);email=WeaverAuthService.email(email);if(accounts.account(workspaces.owner(workspace)).email().equals(email))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"자신은 이미 소유자입니다.");
+  if(!members.registeredEmail(email))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"가입된 계정의 이메일을 입력해주세요.");
   for(var m:members.members(workspace))if(email.equals(m.get("email")))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 참여한 사용자입니다.");
   for(var pending:members.invitations(workspace))if(email.equals(pending.get("email")))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 대기 중인 초대가 있습니다. 취소 후 다시 초대해주세요.");
   if(role.equals("editor"))available(workspace);

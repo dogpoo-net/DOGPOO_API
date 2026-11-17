@@ -25,4 +25,9 @@ class WeaverWorkspaceManagementTest {
   assertThrows(ResponseStatusException.class,()->service.leaveWorkspace("owner","w"));
   assertThrows(ResponseStatusException.class,()->service.leaveWorkspace("stranger","w"));
  }
+ @Test void unknownEmailCannotCreateInvite(){
+  when(accounts.account("owner")).thenReturn(new net.dogpoo.api.core.weaver.model.WeaverAccount("owner","owner@example.com",null,null,"Owner"));
+  assertThrows(ResponseStatusException.class,()->service.invite("owner","w","missing@example.com","viewer"));
+  verify(members,never()).create(anyString(),anyString(),anyString(),anyString(),anyString());
+ }
 }
