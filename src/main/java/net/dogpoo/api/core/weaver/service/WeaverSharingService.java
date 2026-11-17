@@ -71,7 +71,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   if(!"owner".equals(target.role()))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
   String prefix=query==null?"":query.strip().toLowerCase(Locale.ROOT);
   if(prefix.length()<2 || prefix.length()>254)return List.of();
-  return members.emailSuggestions(prefix.replace("!","!!").replace("%","!%").replace("_","!_"));
+  return members.emailSuggestions(prefix.replace("!","!!").replace("%","!%").replace("_","!_"),target.id(),user);
  }
  @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED) public Map<String,Object> invite(String user,String workspace,String email,String role){
   lockOwner(user,workspace);role=role(role);email=WeaverAuthService.email(email);if(accounts.account(workspaces.owner(workspace)).email().equals(email))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"자신은 이미 소유자입니다.");

@@ -1,7 +1,7 @@
 package net.dogpoo.api.core.weaver.mapper;
 import org.apache.ibatis.annotations.*;import java.util.*;
 @Mapper public interface WeaverSharingMapper {
- @Select("SELECT email FROM WEAVER_USER_ACCOUNT WHERE verified_at IS NOT NULL AND email LIKE CONCAT(#{prefix},'%') ESCAPE '!' ORDER BY email ASC LIMIT 5") java.util.List<String> emailSuggestions(String prefix);
+ @Select("SELECT a.email FROM WEAVER_USER_ACCOUNT a WHERE a.verified_at IS NOT NULL AND a.id != #{user} AND NOT EXISTS (SELECT 1 FROM WEAVER_WORKSPACE_MEMBER m WHERE m.workspace_id=#{workspace} AND m.user_id=a.id) AND a.email LIKE CONCAT(#{prefix},'%') ESCAPE '!' ORDER BY a.email ASC LIMIT 5") java.util.List<String> emailSuggestions(@Param("prefix") String prefix,@Param("workspace") String workspace,@Param("user") String user);
  @Select("SELECT EXISTS(SELECT 1 FROM WEAVER_USER_ACCOUNT WHERE email=#{email} AND verified_at IS NOT NULL)") boolean registeredEmail(String email);
  @Select("SELECT m.workspace_id AS workspaceId,m.role,COALESCE(w.name,'내 워크스페이스') AS name,COALESCE(NULLIF(a.display_name,''),SUBSTRING_INDEX(a.email,'@',1)) AS ownerName FROM WEAVER_WORKSPACE_MEMBER m JOIN WEAVER_ACCOUNT_WORKSPACE w ON w.user_id=m.workspace_id JOIN WEAVER_USER_ACCOUNT a ON a.id=w.owner_id WHERE m.user_id=#{id} AND w.archived_at IS NULL ORDER BY m.joined_at") List<Map<String,Object>> memberships(String id);
  @Select("SELECT role FROM WEAVER_WORKSPACE_MEMBER WHERE workspace_id=#{workspace} AND user_id=#{user}") String role(@Param("workspace") String workspace,@Param("user") String user);
