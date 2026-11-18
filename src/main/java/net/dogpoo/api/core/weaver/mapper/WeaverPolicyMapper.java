@@ -24,7 +24,7 @@ import org.apache.ibatis.annotations.*;
  @Select("SELECT code FROM WEAVER_PLAN_POLICY WHERE code='free' FOR UPDATE") String lockAdmin();
  @Select("SELECT COUNT(*) FROM WEAVER_USER_ACCOUNT WHERE platform_role='admin'") int admins();
  @Update("UPDATE WEAVER_USER_ACCOUNT SET platform_role=#{role} WHERE id=#{id}") int platformRoleSet(@Param("id")String id,@Param("role")String role);
- @Select("SELECT id,email,display_name AS name,platform_role AS platformRole FROM WEAVER_USER_ACCOUNT WHERE verified_at IS NOT NULL AND (email LIKE CONCAT(#{query},'%') ESCAPE '!' OR id=#{query}) ORDER BY email LIMIT 30") List<Map<String,Object>> users(String query);
+ @Select("SELECT id,email,display_name AS name,platform_role AS platformRole FROM WEAVER_USER_ACCOUNT WHERE verified_at IS NOT NULL AND (email LIKE CONCAT('%',#{query},'%') ESCAPE '!' OR display_name LIKE CONCAT('%',#{query},'%') ESCAPE '!' OR id=#{query}) ORDER BY email LIMIT 30") List<Map<String,Object>> users(String query);
  @Select("SELECT id,email,display_name AS name,platform_role AS platformRole FROM WEAVER_USER_ACCOUNT WHERE id=#{id}") Map<String,Object> user(String id);
  @Insert("INSERT INTO WEAVER_POLICY_AUDIT(actor_id,action,target_id,details) VALUES(#{actor},#{action},#{target},#{details})") void audit(@Param("actor")String actor,@Param("action")String action,@Param("target")String target,@Param("details")String details);
  @Select("SELECT id,actor_id AS actorId,action,target_id AS targetId,details,DATE_FORMAT(created_at,'%Y-%m-%dT%H:%i:%s.%fZ') AS createdAt FROM WEAVER_POLICY_AUDIT ORDER BY id DESC LIMIT 100") List<Map<String,Object>> auditList();
