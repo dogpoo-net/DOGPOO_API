@@ -8,12 +8,13 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  private final WeaverWorkspaceMapper workspaces;private final WeaverSharingMapper members;private final WeaverSessionMapper accounts;
  public WeaverSharingService(WeaverWorkspaceMapper workspaces,WeaverSharingMapper members,WeaverSessionMapper accounts){this.workspaces=workspaces;this.members=members;this.accounts=accounts;}
  public record Access(String id,String email,String role){}
- @Transactional public Access access(String user,String workspace,boolean write){
+ @Transactional public Access access(String user,String workspace,boolean write){return access(user,workspace,write,false);}
+ private Access access(String user,String workspace,boolean write,boolean metadata){
   String target=workspace==null || workspace.isBlank()?primary(user):workspace;
   if(target==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"이용 가능한 워크스페이스가 없습니다.");
   if(workspaces.archived(target))throw new ResponseStatusException(HttpStatus.GONE,"삭제된 워크스페이스입니다.");
   String role=user.equals(workspaces.owner(target))?"owner":members.role(target,user);
-  if(policy!=null && !user.equals(workspaces.owner(target)) && !policy.online(target))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자의 Free 공간은 공유가 중단된 상태입니다.");
+  if(!metadata && policy!=null && !user.equals(workspaces.owner(target)) && !policy.online(target))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자의 Free 공간은 공유가 중단된 상태입니다.");
   if("editor".equals(role) && policy!=null && !policy.editorAllowed(target,user))role="viewer";
   if(role==null || (write && role.equals("viewer")))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"이 워크스페이스를 편집할 권한이 없습니다.");
   var owner=accounts.account(workspaces.owner(target));if(owner==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);return new Access(target,owner.email(),role);
@@ -28,9 +29,8 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  @Transactional public Map<String,Object> catalog(String user,String email){
   var list=new ArrayList<Map<String,Object>>(workspaces.owned(user));list.addAll(members.memberships(user));
   var result=new HashMap<String,Object>();
-  if(policy!=null)list.removeIf(row->!"owner".equals(row.get("role"))&&!policy.online((String)row.get("workspaceId")));
   if(policy!=null)list.replaceAll(row->{var decorated=policy.decorate(row);if("editor".equals(decorated.get("role"))&&!policy.editorAllowed((String)row.get("workspaceId"),user))decorated.put("role","viewer");return decorated;});
-  result.put("workspaces",list);result.put("defaultWorkspaceId",list.isEmpty()?null:list.getFirst().get("workspaceId"));result.put("invitations",members.received(email));result.put("isAdmin",policy!=null&&policy.admin(user));if(policy!=null)result.put("accountPolicy",policy.accountStatus(user));return result;
+  result.put("workspaces",list);result.put("defaultWorkspaceId",list.stream().filter(row->!Boolean.TRUE.equals(row.get("sharingSuspended"))).map(row->row.get("workspaceId")).findFirst().orElse(null));result.put("invitations",members.received(email));result.put("isAdmin",policy!=null&&policy.admin(user));if(policy!=null)result.put("accountPolicy",policy.accountStatus(user));return result;
  }
  private String workspaceName(String value){
   String name=value==null?"":value.strip();
@@ -71,7 +71,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   if(policy!=null&&!workspaces.archived(workspace))policy.admission(recipient);
   members.remove(workspace,recipient);if(keepFormerOwner)members.join(workspace,user,"editor");workspaces.transfer(workspace,recipient);
  }
- public Map<String,Object> list(String user,String workspace){var target=access(user,workspace,false);var owner=accounts.account(workspaces.owner(target.id()));var list=new ArrayList<Map<String,Object>>();var item=new HashMap<String,Object>();item.put("userId",owner.id());item.put("role","owner");item.put("name",owner.displayName()==null?"소유자":owner.displayName());item.put("email",owner.email());list.add(item);list.addAll(members.members(target.id()));if(policy!=null)for(var row:list){row.put("configuredRole",row.get("role"));if("editor".equals(row.get("role"))&&!policy.editorAllowed(target.id(),(String)row.get("userId")))row.put("role","viewer");}
+ public Map<String,Object> list(String user,String workspace){var target=access(user,workspace,false,true);var owner=accounts.account(workspaces.owner(target.id()));var list=new ArrayList<Map<String,Object>>();var item=new HashMap<String,Object>();item.put("userId",owner.id());item.put("role","owner");item.put("name",owner.displayName()==null?"소유자":owner.displayName());item.put("email",owner.email());list.add(item);list.addAll(members.members(target.id()));if(policy!=null)for(var row:list){row.put("configuredRole",row.get("role"));if("editor".equals(row.get("role"))&&!policy.editorAllowed(target.id(),(String)row.get("userId")))row.put("role","viewer");}
  var result=new HashMap<String,Object>();result.put("members",list);result.put("invitations",target.role().equals("owner")?members.invitations(target.id()):List.of());result.put("editorLimit",policy==null?2:policy.editorLimit(target.id()));return result;}
  public List<String> emailSuggestions(String user,String workspace,String query){
   var target=access(user,workspace,false);

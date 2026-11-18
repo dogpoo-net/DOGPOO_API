@@ -39,7 +39,14 @@ import net.dogpoo.api.core.weaver.model.WeaverWorkspaceRequest;
  public void validateMedia(String id,long additional){requireWrite(id);Long capacity=limit(plan(id),"storage_limit");if(capacity!=null && store.bytes(id)+additional>capacity)throw deny("저장 용량을 초과하여 첨부파일을 추가할 수 없습니다.");}
  public long bytes(String id){return store.bytes(id);}public long documents(String id){return store.documents(id);}
  public void validateRestore(String user,String id){if(!paid(id))throw deny("복원은 유료 플랜에서 가능합니다. 남은 보관 기간 안에 구독을 활성화해주세요.");admission(user);var p=plan(id);Long bytes=limit(p,"storage_limit"),docs=limit(p,"document_limit");if(bytes!=null&&store.bytes(id)>bytes || docs!=null&&store.documents(id)>docs)throw deny("복원할 공간의 자료가 현재 플랜 한도를 초과합니다.");}
- public Map<String,Object> decorate(Map<String,Object> original){var row=new HashMap<>(original);String id=(String)row.get("workspaceId");var p=plan(id);row.put("plan",p.get("code"));row.put("limits",p);row.put("offline",!online(id));row.put("quotaReadOnly",!selectedForWrite(id));return row;}
+ public String sharingSuspensionReason(String id){
+  if(online(id))return null;
+  var subscription=store.subscription(spaces.owner(id));
+  if(subscription==null || subscription.isEmpty())return "free";
+  Object cancelled=subscription.get("cancelAtEnd");
+  return Boolean.TRUE.equals(cancelled) || cancelled instanceof Number n && n.intValue()!=0 ? "cancelled" : "expired";
+ }
+ public Map<String,Object> decorate(Map<String,Object> original){var row=new HashMap<>(original);String id=(String)row.get("workspaceId");var p=plan(id);row.put("plan",p.get("code"));row.put("limits",p);row.put("offline",!online(id));if(!"owner".equals(row.get("role"))){String reason=sharingSuspensionReason(id);row.put("sharingSuspended",reason!=null);if(reason!=null)row.put("subscriptionEndReason",reason);}row.put("quotaReadOnly",!selectedForWrite(id));return row;}
  public Map<String,Object> status(String id){var result=new HashMap<String,Object>();result.put("plan",plan(id));result.put("subscription",Optional.ofNullable(store.subscription(spaces.owner(id))).orElse(Map.of()));result.put("bytes",store.bytes(id));result.put("documents",store.documents(id));result.put("quotaReadOnly",!selectedForWrite(id));result.put("billingConnected",false);return result;}
  private void owner(String user,String id){if(id==null||!user.equals(spaces.owner(id)))throw new ResponseStatusException(HttpStatus.FORBIDDEN);spaces.lock(id);}
  @Transactional public Map<String,Object> cancel(String user,String id,boolean cancel){owner(user,id);if(store.cancel(user,cancel)!=1)throw deny("유효한 유료 구독이 없습니다.");store.audit(user,cancel?"cancel_at_end":"resume_subscription",user,"{}");return status(id);}

@@ -7,6 +7,19 @@ class WeaverWorkspacePolicyTest {
  WeaverPolicyMapper db=mock(WeaverPolicyMapper.class);WeaverWorkspaceMapper spaces=mock(WeaverWorkspaceMapper.class);WeaverSharingMapper members=mock(WeaverSharingMapper.class);
  WeaverWorkspacePolicyService policy=new WeaverWorkspacePolicyService(db,spaces,members);
  @BeforeEach void setup(){when(spaces.owner("w")).thenReturn("owner");when(spaces.revision("w")).thenReturn(1L);when(db.plan("w")).thenReturn(Map.of("code","free","editor_limit",2));when(db.plans()).thenReturn(List.of(Map.of("code","free")));when(db.accountPlan(anyString())).thenReturn(Map.of("code","free","owned_limit",2));when(db.owned("owner")).thenReturn(List.of(Map.of("workspaceId","w","plan","free")));}
+ @Test void suspensionReasonsPreserveCancellationAndNeverSubscribedDistinction(){
+  assertEquals("free",policy.sharingSuspensionReason("w"));
+  when(db.subscription("owner")).thenReturn(Map.of("cancelAtEnd",false));assertEquals("expired",policy.sharingSuspensionReason("w"));
+  when(db.subscription("owner")).thenReturn(Map.of("cancelAtEnd",true));assertEquals("cancelled",policy.sharingSuspensionReason("w"));
+  when(db.plan("w")).thenReturn(Map.of("code","standard"));assertNull(policy.sharingSuspensionReason("w"));
+ }
+ @Test void suspendedMembershipRemainsInCatalogWithoutBecomingDefault(){
+  when(members.memberships("guest")).thenReturn(List.of(Map.of("workspaceId","w","role","viewer")));
+  var sharing=new WeaverSharingService(spaces,members,mock(WeaverSessionMapper.class));ReflectionTestUtils.setField(sharing,"policy",policy);
+  var result=sharing.catalog("guest","guest@test.invalid");assertNull(result.get("defaultWorkspaceId"));
+  var rows=(List<?>)result.get("workspaces");assertEquals(1,rows.size());assertEquals(true,((Map<?,?>)rows.getFirst()).get("sharingSuspended"));
+  assertThrows(ResponseStatusException.class,()->sharing.access("guest","w",false));
+ }
  @Test void joinedMembershipsNeverConsumeOwnedQuota(){when(db.accountPlan(anyString())).thenReturn(Map.of("code","free","owned_limit",1));policy.admission("guest");verifyNoInteractions(members);}
  @Test void ownedLimitBlocksAdmissionAtBoundary(){when(db.accountPlan(anyString())).thenReturn(Map.of("code","free","owned_limit",1));when(db.owned("owner")).thenReturn(List.of(Map.of("workspaceId","w","plan","free")));assertEquals(422,assertThrows(ResponseStatusException.class,()->policy.admission("owner")).getStatusCode().value());}
  @Test void proOwnedLimitIsUnlimited(){when(db.accountPlan("owner")).thenReturn(Map.of("code","pro"));assertNull(policy.ownedLimit("owner"));policy.admission("owner");}

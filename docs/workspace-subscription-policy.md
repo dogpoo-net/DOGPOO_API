@@ -48,3 +48,12 @@ and web assets; avoid mutations while resolving a deployment failure.
 
 QA workbook: /home/ocaptain/WEAVER_workspace_policy_tests.xlsx.
 Generator: tool/generate_policy_tests.py. Manual/device cases require separate execution.
+
+## Suspended memberships
+Joined spaces remain in catalog while their owner's subscription is inactive, with
+sharingSuspended=true and subscriptionEndReason=cancelled/expired/free. Cancellation
+reservations become cancelled only after paid access ends. Explicit admin downgrade retains
+the subscription row as cancelled; renewal replaces it. Never-subscribed/unknown legacy
+history is free, not a fabricated cancellation or expiry. Suspended spaces cannot be the
+default or selected for content access. Existing members can view the member roster or leave.
+Payment/refund webhooks remain unimplemented; future adapters must retain termination reason.
