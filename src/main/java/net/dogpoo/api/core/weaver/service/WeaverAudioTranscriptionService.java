@@ -14,8 +14,15 @@ import net.dogpoo.api.core.weaver.mapper.*;
  private boolean executable(String name){if(name.contains("/"))return Files.isExecutable(Path.of(name));for(String dir:System.getenv().getOrDefault("PATH","").split(java.io.File.pathSeparator))if(Files.isExecutable(Path.of(dir,name)))return true;return false;}
  public Map<String,Object> settings(String actor){policy.requireAdmin(actor);var result=new HashMap<>(mapper.setting());result.put("runtimeReady",executable(ffmpeg)&&executable(ffprobe));result.put("groqConfigured",!groqKey.isBlank());result.put("openaiConfigured",!openaiKey.isBlank());return result;}
  @Transactional public Map<String,Object> configure(String actor,String provider,String model,boolean enabled){policy.requireAdmin(actor);if(!supported(provider,model))throw WeaverWorkspacePolicyService.deny("지원하지 않는 음성 모델입니다.");if(enabled&&key(provider).isBlank())throw WeaverWorkspacePolicyService.deny("선택한 제공자의 API 키를 서버에 먼저 설정해주세요.");if(enabled&&(!executable(ffmpeg)||!executable(ffprobe)))throw WeaverWorkspacePolicyService.deny("서버의 ffmpeg / ffprobe를 설정해주세요.");var before=mapper.setting();mapper.update(provider,model,enabled);audit.audit(actor,"audio_provider","1",before+" -> "+mapper.setting());return settings(actor);}
- public static double transcriptionSeconds(double duration,boolean paid){if(!Double.isFinite(duration)||duration<=0||duration>(paid?3600:60)+.5)throw WeaverWorkspacePolicyService.deny(paid?"녹음은 최대 1시간입니다.":"무료 녹음은 최대 1분입니다.");return paid?duration:Math.min(duration,10);}
- public Map<String,Object> transcribe(String workspace,String data){
+ public static double transcriptionSeconds(double duration,boolean paid){if(!Double.isFinite(duration)||duration<=0||duration>(paid?3600:60)+.5)throw WeaverWorkspacePolicyService.deny(paid?"녹음은 최대 1시간입니다.":"무료 녹음은 최대 1분입니다.");return duration;}
+ public Map<String,Object> availability(String account){
+  var config=mapper.setting();String provider=(String)config.get("provider");Object enabled=config.get("enabled");
+  boolean active=(Boolean.TRUE.equals(enabled)||enabled instanceof Number n&&n.intValue()==1)&&!key(provider).isBlank()&&executable(ffmpeg)&&executable(ffprobe);
+  boolean paid=Set.of("standard","pro").contains(policy.accountPlan(account).get("code"));
+  return Map.of("enabled",active&&paid,"allowed",paid,"maxRecordingSeconds",paid?3600:60,"maxTranscriptionSeconds",paid?3600:0);
+ }
+ public Map<String,Object> transcribe(String account,String data){
+  if(!Set.of("standard","pro").contains(policy.accountPlan(account).get("code")))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"AI 음성 변환은 구독 중인 계정에서 사용할 수 있습니다.");
   var config=mapper.setting();String provider=(String)config.get("provider"),model=(String)config.get("model");Object active=config.get("enabled");
   if(!(Boolean.TRUE.equals(active)||active instanceof Number n&&n.intValue()==1)||key(provider).isBlank())throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"음성 변환이 아직 활성화되지 않았습니다.");
   if(!supported(provider,model))throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"음성 모델 설정을 확인해주세요.");
@@ -26,10 +33,14 @@ import net.dogpoo.api.core.weaver.mapper.*;
   Path dir=null;
   try{
    dir=Files.createTempDirectory("weaver-transcribe-");Path source=dir.resolve("input"),output=dir.resolve("clip.mp3"),probe=dir.resolve("duration"),log=dir.resolve("process.log");Files.write(source,input);
-   run(List.of(ffprobe,"-v","error","-protocol_whitelist","file,pipe","-format_whitelist","mp3,wav,ogg,matroska,webm,mov,flac,aac","-show_entries","format=duration","-of","default=noprint_wrappers=1:nokey=1",source.toString()),probe,log,30);
+   // Browser WebM recordings may omit container duration. Decode to a bounded
+   // MP3 first, then measure actual audio rather than trusting client metadata.
+   boolean paid=true;Path decoded=dir.resolve("decoded.mp3");
+   run(List.of(ffmpeg,"-v","error","-nostdin","-protocol_whitelist","file,pipe","-format_whitelist","mp3,wav,ogg,matroska,webm,mov,flac,aac","-i",source.toString(),"-t","3601","-vn","-ac","1","-ar","16000","-c:a","libmp3lame","-b:a","32k","-y",decoded.toString()),dir.resolve("stdout"),log,180);
+   run(List.of(ffprobe,"-v","error","-show_entries","format=duration","-of","default=noprint_wrappers=1:nokey=1",decoded.toString()),probe,log,30);
    double duration;try{duration=Double.parseDouble(Files.readString(probe).strip());}catch(Exception e){throw WeaverWorkspacePolicyService.deny("녹음 길이를 확인할 수 없는 파일입니다.");}
-   double seconds=transcriptionSeconds(duration,policy.paid(workspace));
-   run(List.of(ffmpeg,"-v","error","-nostdin","-protocol_whitelist","file,pipe","-format_whitelist","mp3,wav,ogg,matroska,webm,mov,flac,aac","-i",source.toString(),"-t",Double.toString(seconds),"-vn","-ac","1","-ar","16000","-c:a","libmp3lame","-b:a","32k","-y",output.toString()),dir.resolve("stdout"),log,180);
+   double seconds=transcriptionSeconds(duration,paid);
+   Files.move(decoded,output);
    byte[] audio=Files.readAllBytes(output);if(audio.length>24*1024*1024)throw WeaverWorkspacePolicyService.deny("변환된 음성 파일이 너무 큽니다.");
    String boundary="weaver-"+UUID.randomUUID();var body=new java.io.ByteArrayOutputStream();
    body.write(("--"+boundary+"\r\nContent-Disposition: form-data; name=\"model\"\r\n\r\n"+model+"\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"response_format\"\r\n\r\njson\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"file\"; filename=\"clip.mp3\"\r\nContent-Type: audio/mpeg\r\n\r\n").getBytes(StandardCharsets.UTF_8));body.write(audio);body.write(("\r\n--"+boundary+"--\r\n").getBytes(StandardCharsets.UTF_8));
