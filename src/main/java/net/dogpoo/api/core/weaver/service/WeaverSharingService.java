@@ -34,7 +34,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  }
  private String workspaceName(String value){
   String name=value==null?"":value.strip();
-  if(name.isEmpty() || name.codePointCount(0,name.length())>80)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"워크스페이스 이름은 1~80자로 입력해주세요.");
+  if(name.isEmpty() || name.codePointCount(0,name.length())>50)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"워크스페이스 이름은 1~50자로 입력해주세요.");
   return name;
  }
  @Transactional public Map<String,Object> createWorkspace(String user,String name){

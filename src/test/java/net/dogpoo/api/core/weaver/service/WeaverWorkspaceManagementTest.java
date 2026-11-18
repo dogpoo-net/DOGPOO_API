@@ -21,6 +21,9 @@ class WeaverWorkspaceManagementTest {
  @Test void ownerCanCreateAndRenameWithValidatedName(){
   var result=service.createWorkspace("owner"," 새 공간 ");String id=(String)result.get("workspaceId");
   verify(spaces).create(id,"owner");verify(spaces).initializeName(id,"새 공간");
+  service.renameWorkspace("owner","w","가".repeat(50));verify(spaces).rename("w","가".repeat(50));
+  assertThrows(ResponseStatusException.class,()->service.createWorkspace("owner","가".repeat(51)));
+  assertThrows(ResponseStatusException.class,()->service.renameWorkspace("owner","w","가".repeat(51)));
   service.renameWorkspace("owner","w","새 이름");verify(spaces).rename("w","새 이름");
   assertThrows(ResponseStatusException.class,()->service.createWorkspace("owner"," "));
   assertThrows(ResponseStatusException.class,()->service.renameWorkspace("editor","w","bad"));
