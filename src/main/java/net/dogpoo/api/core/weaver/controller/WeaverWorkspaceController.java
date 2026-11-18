@@ -18,6 +18,7 @@ public class WeaverWorkspaceController {
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceLifecycleService lifecycle;
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspacePolicyService policy;
  @org.springframework.beans.factory.annotation.Autowired private WeaverAudioTranscriptionService audio;
+ @org.springframework.beans.factory.annotation.Autowired private WeaverNotificationService notifications;
  private final WeaverSessionService sessions; private final WeaverWorkspaceService workspaces; private final String origin;
  public WeaverWorkspaceController(WeaverSessionService sessions,WeaverWorkspaceService workspaces,@Value("${WEAVER_WEB_ORIGIN:https://weaver.dogpoo.net}") String origin){this.sessions=sessions;this.workspaces=workspaces;this.origin=origin;}
  private Map<String,Object> account(String platform,HttpServletRequest r){
@@ -75,6 +76,8 @@ public class WeaverWorkspaceController {
  @PostMapping({"/comments/read","/comments/write"}) public Map<String,Object> comments(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverCommentRequest request){
   String actor=(String)account(platform,r).get("id");boolean write=r.getRequestURI().endsWith("/write");limits.check((write?"comments-write:":"comments-read:")+actor,write?30:180);return comments.handle(actor,request,write);
  }
+ @PostMapping("/notifications") public Map<String,Object> notifications(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverNotificationRequest request){return notifications.list((String)account(platform,r).get("id"),request.before,request.countOnly);}
+ @PostMapping("/notifications/read") public Map<String,Object> notificationRead(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverNotificationRequest request){notifications.read((String)account(platform,r).get("id"),request.id,request.all);return Map.of("updated",true);}
  @PostMapping("/account-policy") public Map<String,Object> accountPolicy(@PathVariable String platform,HttpServletRequest r){return policy.accountStatus((String)account(platform,r).get("id"));}
  @PostMapping("/subscription") public Map<String,Object> subscription(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){var target=sharing.access((String)account(platform,r).get("id"),request.workspaceId,false);return policy.status(target.id());}
  @PostMapping("/subscription-cancel") public Map<String,Object> subscriptionCancel(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){return policy.cancel((String)account(platform,r).get("id"),request.workspaceId,request.cancel);}

@@ -8,6 +8,7 @@ import net.dogpoo.api.core.weaver.mapper.*;
 import net.dogpoo.api.core.weaver.model.*;
 @Service public class WeaverCommentService {
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceEvents events;
+ @org.springframework.beans.factory.annotation.Autowired private WeaverNotificationService notifications;
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspacePolicyService policy;
  private final WeaverCommentMapper comments;private final WeaverSharingService sharing;private final WeaverSessionMapper accounts;
  public WeaverCommentService(WeaverCommentMapper comments,WeaverSharingService sharing,WeaverSessionMapper accounts){this.comments=comments;this.sharing=sharing;this.accounts=accounts;}
@@ -25,6 +26,7 @@ import net.dogpoo.api.core.weaver.model.*;
    var stored=comments.submitted(actor,r.requestId);
    if(!target.id().equals(stored.get("workspace")) || !r.memoId.equals(stored.get("memo")) || !content.equals(stored.get("content")))throw new ResponseStatusException(HttpStatus.CONFLICT,"댓글 요청이 변경되었습니다. 다시 시도해주세요.");
   }
+  if(write && notifications!=null)notifications.comment(target.id(),r.memoId,actor,r.requestId);
   if(write && events!=null)events.changedAfterCommit(target.id());
   return Map.of("comments",comments.list(target.id(),r.memoId,write?Long.MAX_VALUE:r.beforeId),"commentCount",comments.count(target.id(),r.memoId));
  }
