@@ -9,6 +9,16 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 class WeaverWorkspaceControllerTest {
+ @Test void internalMemberFailureIs500Not401AndDoesNotExposeException()throws Exception{
+  var sessions=mock(WeaverSessionService.class);var sharing=mock(WeaverSharingService.class);
+  when(sessions.me("Bearer valid")).thenReturn(Map.of("id","account-a","email","a@example.com"));
+  when(sharing.list("account-a","w")).thenThrow(new NullPointerException("private internal details"));
+  var controller=new WeaverWorkspaceController(sessions,mock(WeaverWorkspaceService.class),"https://weaver.dogpoo.net");org.springframework.test.util.ReflectionTestUtils.setField(controller,"sharing",sharing);
+  var mvc=MockMvcBuilders.standaloneSetup(controller).build();
+  mvc.perform(post("/weaver/api/auth/session/native/workspace/members").header("Authorization","Bearer valid").contentType("application/json").content("{\"workspaceId\":\"w\"}"))
+   .andExpect(status().isInternalServerError()).andExpect(header().string("Cache-Control","no-store"))
+   .andExpect(jsonPath("$.message").value("서버에서 요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요. (500)"));
+ }
  @Test void ownershipComesOnlyFromSessionAndWebOriginIsRequired() throws Exception {
   var sessions=mock(WeaverSessionService.class);var data=mock(WeaverWorkspaceService.class);
   when(sessions.me("Bearer valid")).thenReturn(Map.of("id","account-a","email","a@example.com"));

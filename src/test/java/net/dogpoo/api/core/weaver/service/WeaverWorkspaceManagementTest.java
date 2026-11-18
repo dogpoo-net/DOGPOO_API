@@ -11,6 +11,13 @@ class WeaverWorkspaceManagementTest {
  WeaverWithdrawalMapper deletion=mock(WeaverWithdrawalMapper.class);
  WeaverSharingService service=new WeaverSharingService(spaces,members,accounts);
  @BeforeEach void setup(){when(spaces.revision("w")).thenReturn(1L);when(spaces.owner("w")).thenReturn("owner");}
+ @Test void unlimitedEditorLimitIsReturnedAsNullWithoutUnboxing(){
+  var policy=mock(WeaverWorkspacePolicyService.class);org.springframework.test.util.ReflectionTestUtils.setField(service,"policy",policy);
+  when(accounts.account("owner")).thenReturn(new net.dogpoo.api.core.weaver.model.WeaverAccount("owner","owner@example.com",null,null,"Owner"));
+  when(policy.editorLimit("w")).thenReturn(null);
+  var result=service.list("owner","w");assertTrue(result.containsKey("editorLimit"));assertNull(result.get("editorLimit"));
+  when(policy.editorLimit("w")).thenReturn(2L);assertEquals(2L,service.list("owner","w").get("editorLimit"));
+ }
  @Test void ownerCanCreateAndRenameWithValidatedName(){
   var result=service.createWorkspace("owner"," 새 공간 ");String id=(String)result.get("workspaceId");
   verify(spaces).create(id,"owner");verify(spaces).initializeName(id,"새 공간");

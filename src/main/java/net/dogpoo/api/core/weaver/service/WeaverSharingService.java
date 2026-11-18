@@ -72,7 +72,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   members.remove(workspace,recipient);if(keepFormerOwner)members.join(workspace,user,"editor");workspaces.transfer(workspace,recipient);
  }
  public Map<String,Object> list(String user,String workspace){var target=access(user,workspace,false,true);var owner=accounts.account(workspaces.owner(target.id()));var list=new ArrayList<Map<String,Object>>();var item=new HashMap<String,Object>();item.put("userId",owner.id());item.put("role","owner");item.put("name",owner.displayName()==null?"소유자":owner.displayName());item.put("email",owner.email());list.add(item);list.addAll(members.members(target.id()));if(policy!=null)for(var row:list){row.put("configuredRole",row.get("role"));if("editor".equals(row.get("role"))&&!policy.editorAllowed(target.id(),(String)row.get("userId")))row.put("role","viewer");}
- var result=new HashMap<String,Object>();result.put("members",list);result.put("invitations",target.role().equals("owner")?members.invitations(target.id()):List.of());result.put("editorLimit",policy==null?2:policy.editorLimit(target.id()));return result;}
+ var result=new HashMap<String,Object>();result.put("members",list);result.put("invitations",target.role().equals("owner")?members.invitations(target.id()):List.of());result.put("editorLimit",policy==null?Long.valueOf(2):policy.editorLimit(target.id()));return result;}
  public List<String> emailSuggestions(String user,String workspace,String query){
   var target=access(user,workspace,false);
   if(!"owner".equals(target.role()))throw new ResponseStatusException(HttpStatus.FORBIDDEN);

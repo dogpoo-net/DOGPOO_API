@@ -90,6 +90,10 @@ public class WeaverWorkspaceController {
  @PostMapping("/audio/transcribe") public Map<String,Object> transcribe(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverWorkspaceRequest request){String actor=(String)account(platform,r).get("id");var target=sharing.access(actor,request.workspaceId,true);limits.check("transcribe:"+actor,3);return audio.transcribe(target.id(),request.data);}
  @PostMapping("/admin/audio-settings") public Map<String,Object> audioSettings(@PathVariable String platform,HttpServletRequest r){return audio.settings((String)account(platform,r).get("id"));}
  @PostMapping("/admin/audio-configure") public Map<String,Object> audioConfigure(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){return audio.configure((String)account(platform,r).get("id"),request.provider,request.model,request.enabled);}
+ @ExceptionHandler(RuntimeException.class) public ResponseEntity<Map<String,String>> unexpected(RuntimeException e){
+  org.slf4j.LoggerFactory.getLogger(WeaverWorkspaceController.class).error("Workspace request failed",e);
+  return ResponseEntity.status(500).header("Cache-Control","no-store").body(Map.of("message","서버에서 요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요. (500)"));
+ }
  @ExceptionHandler(ResponseStatusException.class) public ResponseEntity<Map<String,String>> error(ResponseStatusException e){return ResponseEntity.status(e.getStatusCode()).body(Map.of("message",e.getReason()==null?"인증된 계정의 자료만 사용할 수 있습니다.":e.getReason()));}
  @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class) public ResponseEntity<Map<String,String>> duplicate(){return ResponseEntity.status(409).body(Map.of("message","이미 처리 중인 가져오기입니다. 같은 계정으로 다시 시도해주세요."));}
 }
