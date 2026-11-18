@@ -11,19 +11,20 @@ import net.dogpoo.api.core.weaver.model.*;
 @Service
 public class WeaverOAuthService {
  private final WeaverOAuthMapper flows;
+ private final WeaverBrowserIdentityGateway browser;
  private final WeaverNaverGateway gateway;
  private final WeaverGithubGateway github;
  private final WeaverGitlabGateway gitlab;
  private final WeaverSocialAccountService accounts;
  private final WeaverSessionService sessions;
  private final SecureRandom random=new SecureRandom();
- public WeaverOAuthService(WeaverOAuthMapper flows,WeaverNaverGateway gateway,WeaverGithubGateway github,WeaverGitlabGateway gitlab,WeaverSocialAccountService accounts,WeaverSessionService sessions){this.flows=flows;this.gateway=gateway;this.github=github;this.gitlab=gitlab;this.accounts=accounts;this.sessions=sessions;}
+ public WeaverOAuthService(WeaverOAuthMapper flows,WeaverNaverGateway gateway,WeaverGithubGateway github,WeaverGitlabGateway gitlab,WeaverSocialAccountService accounts,WeaverSessionService sessions,WeaverBrowserIdentityGateway browser){this.browser=browser;this.flows=flows;this.gateway=gateway;this.github=github;this.gitlab=gitlab;this.accounts=accounts;this.sessions=sessions;}
  private String random(){byte[] b=new byte[32];random.nextBytes(b);return Base64.getUrlEncoder().withoutPadding().encodeToString(b);}
  private String hash(String s){return WeaverAuthService.hash(s);}
  private void check(String s){if(s==null || !s.matches("[A-Za-z0-9_-]{43}"))throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"로그인 요청을 확인할 수 없습니다.");}
  @Transactional public Map<String,Object> start(String provider,String platform,String proof,String link){
   check(proof);String id=random(),state=random();
-  String url=switch(provider){case "naver"->gateway.authorize(state);case "github"->github.authorize(state);case "gitlab"->gitlab.authorize(state);default->throw new ResponseStatusException(HttpStatus.BAD_REQUEST);};
+  String url=switch(provider){case "google","kakao"->browser.authorize(provider,state);case "naver"->gateway.authorize(state);case "github"->github.authorize(state);case "gitlab"->gitlab.authorize(state);default->throw new ResponseStatusException(HttpStatus.BAD_REQUEST);};
   flows.cleanup();flows.insert(hash(id),hash(state),hash(proof),platform,provider,link);return Map.of("flow",id,"authorizeUrl",url);
  }
  public void callback(String provider,String code,String state,String error){
@@ -31,7 +32,7 @@ public class WeaverOAuthService {
   if(flows.claim(stateHash,provider)!=1)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"만료되었거나 이미 처리한 로그인 요청입니다.");
   try {
    if(error!=null || code==null || code.isBlank() || code.length()>2048)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"소셜 로그인이 취소되었습니다.");
-   flows.complete(stateHash,(switch(provider){case "github"->github.exchange(code,state);case "gitlab"->gitlab.exchange(code,state);default->gateway.exchange(code,state);}));
+   flows.complete(stateHash,(switch(provider){case "google","kakao"->browser.exchange(provider,code);case "github"->github.exchange(code,state);case "gitlab"->gitlab.exchange(code,state);default->gateway.exchange(code,state);}));
   }catch(ResponseStatusException e){flows.fail(stateHash,e.getStatusCode().value());throw e;}
  }
  @Transactional public Map<String,Object> finish(String provider,String id,String platform,String proof,String bearer,String cookie,String webProof){

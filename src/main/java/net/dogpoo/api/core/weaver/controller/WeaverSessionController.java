@@ -50,15 +50,15 @@ public class WeaverSessionController {
  private WeaverSocialIdentity googleIdentity(WeaverSessionRequest request){
   return request.googleAccessToken!=null?google.verifyAccessToken(request.googleAccessToken):google.verify(request.idToken);
  }
- private String provider(HttpServletRequest r){return r.getRequestURI().contains("/github/")?"github":r.getRequestURI().contains("/gitlab/")?"gitlab":"naver";}
- @PostMapping({"/native/naver/start","/native/github/start","/native/gitlab/start"}) public Map<String,Object> nativeOAuthStart(@RequestBody WeaverSessionRequest request,HttpServletRequest r,@RequestHeader(value="Authorization",required=false) String bearer){
+ private String provider(HttpServletRequest r){return r.getRequestURI().contains("/google/")?"google":r.getRequestURI().contains("/kakao/")?"kakao":r.getRequestURI().contains("/github/")?"github":r.getRequestURI().contains("/gitlab/")?"gitlab":"naver";}
+ @PostMapping({"/native/google/start","/native/kakao/start","/native/naver/start","/native/github/start","/native/gitlab/start"}) public Map<String,Object> nativeOAuthStart(@RequestBody WeaverSessionRequest request,HttpServletRequest r,@RequestHeader(value="Authorization",required=false) String bearer){
   String link=request.link?(String)sessions.me(bearer).get("id"):null;return oauth.start(provider(r),"native",request.proof,link);
  }
- @PostMapping({"/web/naver/start","/web/github/start","/web/gitlab/start"}) public Map<String,Object> webOAuthStart(@RequestBody WeaverSessionRequest request,HttpServletRequest r){
+ @PostMapping({"/web/google/start","/web/kakao/start","/web/naver/start","/web/github/start","/web/gitlab/start"}) public Map<String,Object> webOAuthStart(@RequestBody WeaverSessionRequest request,HttpServletRequest r){
   String link=request.link?(String)sessions.webResume(cookie(r),r.getHeader("X-Weaver-Proof")).get("id"):null;return oauth.start(provider(r),"web",r.getHeader("X-Weaver-Proof"),link);
  }
- @PostMapping({"/native/naver/finish","/native/github/finish","/native/gitlab/finish"}) public Map<String,Object> nativeOAuthFinish(@RequestBody WeaverSessionRequest request,HttpServletRequest r,@RequestHeader(value="Authorization",required=false) String bearer){return oauth.finish(provider(r),request.flow,"native",request.proof,bearer,null,null);}
- @PostMapping({"/web/naver/finish","/web/github/finish","/web/gitlab/finish"}) public Map<String,Object> webOAuthFinish(@RequestBody WeaverSessionRequest request,HttpServletRequest r,HttpServletResponse response){
+ @PostMapping({"/native/google/finish","/native/kakao/finish","/native/naver/finish","/native/github/finish","/native/gitlab/finish"}) public Map<String,Object> nativeOAuthFinish(@RequestBody WeaverSessionRequest request,HttpServletRequest r,@RequestHeader(value="Authorization",required=false) String bearer){return oauth.finish(provider(r),request.flow,"native",request.proof,bearer,null,null);}
+ @PostMapping({"/web/google/finish","/web/kakao/finish","/web/naver/finish","/web/github/finish","/web/gitlab/finish"}) public Map<String,Object> webOAuthFinish(@RequestBody WeaverSessionRequest request,HttpServletRequest r,HttpServletResponse response){
   var result=oauth.finish(provider(r),request.flow,"web",r.getHeader("X-Weaver-Proof"),null,cookie(r),r.getHeader("X-Weaver-Proof"));
   if(result.containsKey("cookieToken"))cookie(r,response,(String)result.remove("cookieToken"),false);return result;
  }

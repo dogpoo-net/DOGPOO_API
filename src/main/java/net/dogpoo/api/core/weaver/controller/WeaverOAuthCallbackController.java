@@ -4,7 +4,7 @@ import org.springframework.http.*;
 import org.springframework.web.server.ResponseStatusException;
 import net.dogpoo.api.core.weaver.service.WeaverOAuthService;
 @RestController
-@RequestMapping("/weaver/api/auth/{provider:naver|github|gitlab}")
+@RequestMapping("/weaver/api/auth/{provider:naver|github|gitlab|google|kakao}")
 public class WeaverOAuthCallbackController {
  private final WeaverOAuthService service;
  public WeaverOAuthCallbackController(WeaverOAuthService service){this.service=service;}
