@@ -7,7 +7,11 @@ class WeaverWorkspaceLifecycleTest {
  WeaverSessionMapper accounts=mock(WeaverSessionMapper.class);WeaverWithdrawalMapper deletion=mock(WeaverWithdrawalMapper.class);WeaverVerificationMail mail=mock(WeaverVerificationMail.class);
  WeaverWorkspaceLifecycleService service=new WeaverWorkspaceLifecycleService(spaces,store,accounts,deletion,mail);
  @BeforeEach void setup(){when(spaces.revision("w")).thenReturn(1L);when(spaces.owner("w")).thenReturn("owner");var account=mock(WeaverAccount.class);when(account.email()).thenReturn("owner@example.invalid");when(accounts.account("owner")).thenReturn(account);}
- @Test void unusedSpaceArchivesWithoutMail(){assertEquals(false,service.preview("owner","w").get("requiresEmail"));assertEquals(true,service.delete("owner","w",null).get("archived"));verify(store).archive("w");verifyNoInteractions(deletion);verify(spaces,never()).deleteWorkspace("w");verifyNoInteractions(mail);}
+ @Test void unusedSpaceDeletesImmediatelyWithoutMailOrRetention(){
+  var preview=service.preview("owner","w");assertEquals(false,preview.get("requiresEmail"));assertEquals(0,preview.get("retentionDays"));
+  var result=service.delete("owner","w",null);assertEquals(false,result.get("archived"));assertEquals(true,result.get("deleted"));assertEquals(0,result.get("retentionDays"));
+  verify(store,never()).archive(anyString());verify(spaces).tombstone("w");verify(spaces).deleteWorkspace("w");verify(deletion).enqueue("w","workspace");verifyNoInteractions(mail);
+ }
  @Test void usedSpaceCannotBypassVerificationEvenAfterEmptyPreview(){service.preview("owner","w");when(store.used("w")).thenReturn(true);assertThrows(ResponseStatusException.class,()->service.delete("owner","w",null));verify(spaces,never()).deleteWorkspace(anyString());verify(store,never()).archive(anyString());}
  @Test void validCodeArchivesAndConsumesChallengeWithoutDeletingFiles(){when(store.used("w")).thenReturn(true);when(store.valid(eq("w"),eq("owner"),anyString())).thenReturn(1);assertEquals(true,service.delete("owner","w","12345678").get("archived"));verify(store).archive("w");verify(store).clear("w");verifyNoInteractions(deletion);verify(spaces,never()).deleteWorkspace(anyString());}
  @Test void codeIsBoundToOwnerWorkspaceAndCurrentEmail(){when(store.attempt("w","owner")).thenReturn(1);service.verify("owner","w","12345678");verify(store).valid("w","owner",WeaverAuthService.hash("workspace-delete:w:owner:owner@example.invalid:12345678"));assertFalse(service.verify("owner","w","wrong"));}

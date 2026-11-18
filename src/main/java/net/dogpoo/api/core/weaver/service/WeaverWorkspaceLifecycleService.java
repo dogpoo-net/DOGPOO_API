@@ -14,7 +14,7 @@ import net.dogpoo.api.core.weaver.mapper.*;
   if(!archived && spaces.archived(id))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 삭제된 워크스페이스입니다.");
  }
  private String hash(String user,String id,String code){var account=accounts.account(user);if(account==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);return WeaverAuthService.hash("workspace-delete:"+id+":"+user+":"+account.email()+":"+code);}
- @Transactional public Map<String,Object> preview(String user,String id){owner(user,id,false);return Map.of("requiresEmail",lifecycle.used(id),"retentionDays",30);}
+ @Transactional public Map<String,Object> preview(String user,String id){owner(user,id,false);boolean used=lifecycle.used(id);return Map.of("requiresEmail",used,"retentionDays",used?30:0);}
  @Transactional public void request(String user,String id){
   owner(user,id,false);if(!lifecycle.used(id))throw new ResponseStatusException(HttpStatus.CONFLICT,"작업 이력이 없어 이메일 인증 없이 삭제할 수 있습니다.");
   if(lifecycle.recent(id)>0)throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,"1분 후 다시 요청해주세요.");
@@ -25,7 +25,10 @@ import net.dogpoo.api.core.weaver.mapper.*;
  @Transactional public boolean verify(String user,String id,String code){owner(user,id,false);if(lifecycle.attempt(id,user)!=1)return false;return code!=null && code.matches("[0-9]{8}") && lifecycle.valid(id,user,hash(user,id,code))==1;}
  @Transactional public Map<String,Object> delete(String user,String id,String code){
   spaces.lockAccountId(user);owner(user,id,false);
-  if(lifecycle.used(id)){
+  if(!lifecycle.used(id)){
+   lifecycle.clear(id);erase(id);return Map.of("archived",false,"deleted",true,"retentionDays",0);
+  }
+  {
    if(code==null || !code.matches("[0-9]{8}") || lifecycle.valid(id,user,hash(user,id,code))!=1)throw new ResponseStatusException(HttpStatus.CONFLICT,"소유자의 이메일 인증이 필요합니다. 삭제를 다시 요청해주세요.");
   }
   lifecycle.archive(id);lifecycle.clear(id);return Map.of("archived",true,"retentionDays",30);
