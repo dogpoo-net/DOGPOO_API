@@ -51,7 +51,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   long beforeBytes=mapper.itemBytes(id)+mapper.mediaBytes(id);long beforePolicyBytes=policy==null?0:policy.bytes(id),beforeDocuments=policy==null?0:policy.documents(id);
   if(request.changes==null || request.changes.size()>20000)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"항목 수가 너무 많습니다.");
   if(request.offlineReconcile){
-   if(importing||request.replaceContents||request.documentMerge||request.canvasOperationId!=null||request.resourceId!=null||!actor.equals(mapper.owner(id)))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 오프라인 변경을 반영할 수 있습니다.");
+   if(importing||request.replaceContents||request.documentMerge||request.canvasOperationId!=null||request.resourceId!=null)throw new ResponseStatusException(HttpStatus.FORBIDDEN,"오프라인 변경은 항목별 비교로 반영해야 합니다.");
    if(request.since!=revision)throw new ResponseStatusException(HttpStatus.CONFLICT,"서버 자료가 변경되었습니다. 오프라인 자료를 보관했으며 다시 비교해야 합니다.");
   }
   if(request.replaceContents){
