@@ -110,6 +110,23 @@ public class WeaverWorkspaceController {
   limits.check("document-summary:" + actor, 4);
   return documentAi.summarize(body.thoughts(), body.material(), body.instruction(), body.length());
  }
+ @Value("${WEAVER_WEB_MAPS_KEY:}") private String webMapsKey = "";
+
+ @PostMapping("/map/config")
+ public ResponseEntity<Map<String,Object>> mapConfig(@PathVariable String platform,
+     HttpServletRequest request, @RequestBody WeaverWorkspaceRequest workspace) {
+  String actor = (String) account(platform, request).get("id");
+  sharing.access(actor, workspace.workspaceId, false);
+  Map<String,Object> config = Map.of();
+  if ("web".equals(platform) && !webMapsKey.isBlank()) {
+   Object plan = policy.accountPlan(actor).get("code");
+   if ("standard".equals(plan) || "pro".equals(plan)) {
+    config = Map.of("key", webMapsKey.strip());
+   }
+  }
+  return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(config);
+ }
+
  @PostMapping("/audio/policy") public Map<String,Object> audioPolicy(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverWorkspaceRequest request){String actor=(String)account(platform,r).get("id");var target=sharing.access(actor,request.workspaceId,true);return audio.availability(actor);}
  @PostMapping("/audio/transcribe") public Map<String,Object> transcribe(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverWorkspaceRequest request){String actor=(String)account(platform,r).get("id");var target=sharing.access(actor,request.workspaceId,true);limits.check("transcribe:"+actor,3);return audio.transcribe(actor,request.data);}
  @PostMapping("/admin/audio-settings") public Map<String,Object> audioSettings(@PathVariable String platform,HttpServletRequest r){return audio.settings((String)account(platform,r).get("id"));}
