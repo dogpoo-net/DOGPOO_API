@@ -13,10 +13,15 @@ import net.dogpoo.api.core.weaver.mapper.*;
   if(!user.equals(spaces.owner(id)))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 삭제·복원할 수 있습니다.");
   if(!archived && spaces.archived(id))throw new ResponseStatusException(HttpStatus.CONFLICT,"이미 삭제된 워크스페이스입니다.");
  }
+ private void removable(String user,String id){
+  owner(user,id,false);
+  policy.requireSpare(user);
+  if(lifecycle.used(id)&&lifecycle.archived(user).size()>=10)throw WeaverWorkspacePolicyService.deny("복구 공간이 가득 찼습니다. 복원하거나 영구 삭제해주세요.");
+ }
  private String hash(String user,String id,String code){var account=accounts.account(user);if(account==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);return WeaverAuthService.hash("workspace-delete:"+id+":"+user+":"+account.email()+":"+code);}
- @Transactional public Map<String,Object> preview(String user,String id){owner(user,id,false);boolean used=lifecycle.used(id);return Map.of("requiresEmail",used,"retentionDays",used?30:0);}
+ @Transactional public Map<String,Object> preview(String user,String id){removable(user,id);boolean used=lifecycle.used(id);return Map.of("requiresEmail",used,"retentionDays",used?30:0);}
  @Transactional public void request(String user,String id){
-  owner(user,id,false);if(!lifecycle.used(id))throw new ResponseStatusException(HttpStatus.CONFLICT,"작업 이력이 없어 이메일 인증 없이 삭제할 수 있습니다.");
+  removable(user,id);if(!lifecycle.used(id))throw new ResponseStatusException(HttpStatus.CONFLICT,"작업 이력이 없어 이메일 인증 없이 삭제할 수 있습니다.");
   if(lifecycle.recent(id)>0)throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,"1분 후 다시 요청해주세요.");
   String code=String.format(Locale.ROOT,"%08d",new SecureRandom().nextInt(100000000));
   lifecycle.issue(id,user,hash(user,id,code));mail.workspaceDeletion(accounts.account(user).email(),code);
@@ -24,7 +29,7 @@ import net.dogpoo.api.core.weaver.mapper.*;
  // Return failure instead of throwing, so failed-attempt counters commit.
  @Transactional public boolean verify(String user,String id,String code){owner(user,id,false);if(lifecycle.attempt(id,user)!=1)return false;return code!=null && code.matches("[0-9]{8}") && lifecycle.valid(id,user,hash(user,id,code))==1;}
  @Transactional public Map<String,Object> delete(String user,String id,String code){
-  spaces.lockAccountId(user);owner(user,id,false);
+  spaces.lockAccountId(user);removable(user,id);
   if(!lifecycle.used(id)){
    lifecycle.clear(id);erase(id);return Map.of("archived",false,"deleted",true,"retentionDays",0);
   }
@@ -33,8 +38,38 @@ import net.dogpoo.api.core.weaver.mapper.*;
   }
   lifecycle.archive(id);lifecycle.clear(id);return Map.of("archived",true,"retentionDays",30);
  }
- public Map<String,Object> archived(String user){var rows=lifecycle.archived(user);for(var row:rows)row.put("canRestore",policy==null||policy.paid((String)row.get("workspaceId")));return Map.of("workspaces",rows);}
+ public Map<String,Object> archived(String user){var rows=lifecycle.archived(user);for(var row:rows)row.put("canRestore",policy.paidAccount(user)&&policy.hasSlot(user));return Map.of("workspaces",rows);}
  @Transactional public void restore(String user,String id){spaces.lockAccountId(user);owner(user,id,true);if(policy!=null)policy.validateRestore(user,id);if(lifecycle.restore(id)!=1)throw new ResponseStatusException(HttpStatus.GONE,"복원 기간이 지났거나 복원할 수 없는 워크스페이스입니다.");lifecycle.clear(id);}
  @Transactional public void purge(String id){if(spaces.revision(id)==null)return;spaces.lock(id);if(lifecycle.expiredOne(id)==1)erase(id);}
+ @org.springframework.beans.factory.annotation.Autowired private WeaverSharingService sharing;
+
+ private void checkAction(String user,String id,String recipient){
+  owner(user,id,true);
+  if(recipient==null){
+   if(!spaces.archived(id)||lifecycle.expiredOne(id)!=0)throw WeaverWorkspacePolicyService.deny("복구 기간 내의 공간만 영구 삭제할 수 있습니다.");
+  }else{
+   sharing.validateTransfer(user,id,recipient);
+  }
+ }
+ private String actionHash(String user,String id,String recipient,String code){
+  return hash(user,id,(recipient==null?"purge":"transfer:"+recipient)+":"+code);
+ }
+ @Transactional public void sendAction(String user,String id,String recipient){
+  checkAction(user,id,recipient);
+  if(lifecycle.recent(id)>0)throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,"1분 후 다시 요청해주세요.");
+  String code=String.format(Locale.ROOT,"%08d",new SecureRandom().nextInt(100000000));
+  lifecycle.issue(id,user,actionHash(user,id,recipient,code));
+  mail.workspaceAction(accounts.account(user).email(),recipient==null?"영구 삭제":"소유권 이전",code);
+ }
+ @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
+ public boolean finishAction(String user,String id,String recipient,String code){
+  if(recipient==null)spaces.lockAccountId(user);
+  else for(String account:java.util.stream.Stream.of(user,recipient).distinct().sorted().toList())spaces.lockAccountId(account);
+  checkAction(user,id,recipient);
+  if(lifecycle.attempt(id,user)!=1 || code==null || !code.matches("[0-9]{8}") || lifecycle.valid(id,user,actionHash(user,id,recipient,code))!=1)return false;
+  lifecycle.clear(id);
+  if(recipient==null)erase(id);else sharing.transfer(user,id,recipient);
+  return true;
+ }
  private void erase(String id){spaces.tombstone(id);deletion.enqueue(id,"workspace");spaces.deleteWorkspace(id);}
 }

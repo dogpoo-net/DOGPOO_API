@@ -71,7 +71,17 @@ public class WeaverWorkspaceController {
  @PostMapping({"/revoke","/remove-member","/member-role"}) public Map<String,Object> change(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){var u=account(platform,r);String user=(String)u.get("id"),workspace=request.workspaceId==null?sharing.primary(user):request.workspaceId;
   if(r.getRequestURI().endsWith("/revoke"))sharing.revoke(user,workspace,request.inviteId);else if(r.getRequestURI().endsWith("/remove-member"))sharing.remove(user,workspace,request.userId);else sharing.setRole(user,workspace,request.userId,request.role);return Map.of("updated",true);
  }
- @PostMapping("/transfer") public Map<String,Object> transfer(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){var u=account(platform,r);var target=sharing.access((String)u.get("id"),request.workspaceId,true);workspaces.read(target.id(),target.email(),(String)u.get("id"),0);sharing.transfer((String)u.get("id"),request.workspaceId,request.userId);return Map.of("updated",true);}
+ @PostMapping({"/transfer-email","/transfer","/purge-workspace-email","/purge-workspace"})
+ public Map<String,Object> workspaceAction(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){
+  String user=(String)account(platform,r).get("id");
+  String path=r.getRequestURI();
+  boolean transfer=path.endsWith("/transfer")||path.endsWith("/transfer-email");
+  if(transfer&&(request.userId==null||request.userId.isBlank()))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"편집자를 선택해주세요.");
+  String recipient=transfer?request.userId:null;
+  if(path.endsWith("-email")){limits.check("workspace-action-mail:"+user,3);lifecycle.sendAction(user,request.workspaceId,recipient);return Map.of("sent",true);}
+  if(!lifecycle.finishAction(user,request.workspaceId,recipient,request.code))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"인증코드가 올바르지 않거나 만료되었습니다.");
+  return Map.of("updated",true);
+ }
  @PostMapping("/history") public Map<String,Object> history(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){var u=account(platform,r);var target=sharing.access((String)u.get("id"),request.workspaceId,false);return Map.of("versions",history.list(target.id(),request.documentId,request.beforeVersion));}
  @PostMapping({"/comments/read","/comments/write"}) public Map<String,Object> comments(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverCommentRequest request){
   String actor=(String)account(platform,r).get("id");boolean write=r.getRequestURI().endsWith("/write");limits.check((write?"comments-write:":"comments-read:")+actor,write?30:180);return comments.handle(actor,request,write);

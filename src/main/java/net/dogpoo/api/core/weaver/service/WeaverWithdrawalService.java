@@ -8,7 +8,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  public WeaverWithdrawalService(WeaverWithdrawalMapper deletion,WeaverWorkspaceMapper workspaces,WeaverSharingMapper members,WeaverSharingService sharing,WeaverSessionMapper accounts,WeaverVerificationMail mail){this.deletion=deletion;this.workspaces=workspaces;this.members=members;this.sharing=sharing;this.accounts=accounts;this.mail=mail;}
  public Map<String,Object> preview(String id){
   var owned=new ArrayList<Map<String,Object>>();
-  for(var w:workspaces.ownedIncludingArchived(id)){var item=new HashMap<String,Object>(w);String key=(String)w.get("workspaceId");item.put("members",members.members(key));item.put("bytes",workspaces.itemBytes(key)+workspaces.mediaBytes(key));owned.add(item);}
+  for(var w:workspaces.ownedIncludingArchived(id)){var item=new HashMap<String,Object>(w);String key=(String)w.get("workspaceId");item.put("members",members.members(key).stream().filter(member->sharing.canOfferTransfer(id,key,(String)member.get("userId"))).toList());item.put("bytes",workspaces.itemBytes(key)+workspaces.mediaBytes(key));owned.add(item);}
   return Map.of("workspaces",owned,"retention","현재 별도 법정 보관 정보는 없습니다. 계정과 운영 DB 자료는 탈퇴 시 삭제합니다. 첨부파일 삭제는 즉시 시작하며 실패 시 자동 재시도합니다. 현재 DB 백업은 운영하지 않습니다.","sharedNotice","이전한 워크스페이스와 다른 사람 소유의 공동 작성물은 유지됩니다. 회원 정보와 작성자 계정 연결은 삭제됩니다.");
  }
  @Transactional public void request(String id){

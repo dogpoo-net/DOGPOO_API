@@ -30,6 +30,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   var list=new ArrayList<Map<String,Object>>(workspaces.owned(user));list.addAll(members.memberships(user));
   var result=new HashMap<String,Object>();
   if(policy!=null)list.replaceAll(row->{var decorated=policy.decorate(row);if("editor".equals(decorated.get("role"))&&!policy.editorAllowed((String)row.get("workspaceId"),user))decorated.put("role","viewer");return decorated;});
+  list.removeIf(row->"owner".equals(row.get("role")) && "free".equals(row.get("plan")) && Boolean.TRUE.equals(row.get("quotaReadOnly")));
   result.put("workspaces",list);result.put("defaultWorkspaceId",list.stream().filter(row->!Boolean.TRUE.equals(row.get("sharingSuspended"))).map(row->row.get("workspaceId")).findFirst().orElse(null));result.put("invitations",members.received(email));result.put("isAdmin",policy!=null&&policy.admin(user));if(policy!=null)result.put("accountPolicy",policy.accountStatus(user));return result;
  }
  private String workspaceName(String value){
@@ -49,7 +50,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   if(!user.equals(workspaces.owner(workspace)))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 관리할 수 있습니다.");
  }
  @Transactional public void renameWorkspace(String user,String workspace,String name){
-  name=workspaceName(name);existingOwner(user,workspace);workspaces.rename(workspace,name);
+  name=workspaceName(name);existingOwner(user,workspace);if(policy!=null&&!policy.paidAccount(user))throw WeaverWorkspacePolicyService.deny("무료 플랜의 기본 공간은 변경할 수 없습니다.");workspaces.rename(workspace,name);
  }
  @Transactional public void leaveWorkspace(String user,String workspace){
   if(workspace==null || workspaces.revision(workspace)==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -61,17 +62,23 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  }
  @Transactional public void transfer(String user,String workspace,String recipient){transferInternal(user,workspace,recipient,true);}
  @Transactional public void transferForWithdrawal(String user,String workspace,String recipient){transferInternal(user,workspace,recipient,false);}
+ public boolean canOfferTransfer(String owner,String workspace,String recipient){return !workspaces.archived(workspace)&&policy.paidAccount(owner)&&policy.activeCount(owner)>=2&&eligibleRecipient(workspace,recipient);}
+ public boolean eligibleRecipient(String workspace,String recipient){
+  return recipient!=null && "editor".equals(members.role(workspace,recipient)) && policy.editorAllowed(workspace,recipient) && policy.paidAccount(recipient) && policy.hasSlot(recipient);
+ }
+ public void validateTransfer(String user,String workspace,String recipient){
+  policy.requireSpare(user);
+  if(workspaces.archived(workspace)||user.equals(recipient)||!eligibleRecipient(workspace,recipient))throw WeaverWorkspacePolicyService.deny("소유 공간 한도에 여유가 있는 유료 플랜 편집자에게만 이전할 수 있습니다.");
+ }
  private void transferInternal(String user,String workspace,String recipient,boolean keepFormerOwner){
+  workspaces.lockAccountId(user);workspaces.lockAccountId(recipient);validateTransfer(user,workspace,recipient);
   if(keepFormerOwner){lockOwner(user,workspace);}else{
    workspaces.lock(workspace);if(!user.equals(workspaces.owner(workspace)))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
   }
-  if(user.equals(recipient) || members.role(workspace,recipient)==null)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"현재 참여자에게만 소유권을 이전할 수 있습니다.");
-  if(accounts.account(recipient)==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-  if(keepFormerOwner && "viewer".equals(members.role(workspace,recipient)) && (policy==null?1+members.editors(workspace)+members.reserved(workspace)>=2:policy.editorLimit(workspace)!=null && 1+members.editors(workspace)+members.reserved(workspace)>=policy.editorLimit(workspace)))throw new ResponseStatusException(HttpStatus.CONFLICT,"편집자 자리를 먼저 정리해주세요.");
-  if(policy!=null&&!workspaces.archived(workspace))policy.admission(recipient);
   members.remove(workspace,recipient);if(keepFormerOwner)members.join(workspace,user,"editor");workspaces.transfer(workspace,recipient);
  }
  public Map<String,Object> list(String user,String workspace){var target=access(user,workspace,false,true);var owner=accounts.account(workspaces.owner(target.id()));var list=new ArrayList<Map<String,Object>>();var item=new HashMap<String,Object>();item.put("userId",owner.id());item.put("role","owner");item.put("name",owner.displayName()==null?"소유자":owner.displayName());item.put("email",owner.email());list.add(item);list.addAll(members.members(target.id()));if(policy!=null)for(var row:list){row.put("configuredRole",row.get("role"));if("editor".equals(row.get("role"))&&!policy.editorAllowed(target.id(),(String)row.get("userId")))row.put("role","viewer");}
+ if(target.role().equals("owner") && policy!=null && policy.paidAccount(user) && policy.activeCount(user)>=2)for(var row:list)if("editor".equals(row.get("role")))row.put("canReceiveOwnership",eligibleRecipient(workspace,(String)row.get("userId")));
  var result=new HashMap<String,Object>();result.put("members",list);result.put("invitations",target.role().equals("owner")?members.invitations(target.id()):List.of());result.put("editorLimit",policy==null?Long.valueOf(2):policy.editorLimit(target.id()));return result;}
  public List<String> emailSuggestions(String user,String workspace,String query){
   var target=access(user,workspace,false);

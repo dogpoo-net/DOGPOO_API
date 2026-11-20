@@ -19,13 +19,17 @@ import net.dogpoo.api.core.weaver.model.WeaverWorkspaceRequest;
  public Long editorLimit(String id){return limit(plan(id),"editor_limit");}
  public boolean editorAllowed(String id,String user){Long n=editorLimit(id);return n==null || store.editors(id).indexOf(user)>=0 && store.editors(id).indexOf(user)<n-1;}
  public void editorSeat(String id,int additional){Long n=editorLimit(id);if(n!=null && 1+members.editors(id)+members.reserved(id)+additional>n)throw deny("워크스페이스의 편집자 한도를 초과합니다. 참여자 또는 대기 중인 초대를 정리해주세요.");}
- public Map<String,Object> accountPlan(String user){var p=store.accountPlan(user);if(p==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"계정이 없습니다.");return p;}
+ public Map<String,Object> accountPlan(String user){var p=store.accountPlan(user);if(p==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"계정이 없습니다.");if("free".equals(p.get("code"))){p=new HashMap<>(p);p.put("owned_limit",1L);}return p;}
  public Long ownedLimit(String user){return limit(accountPlan(user),"owned_limit");}
  public boolean online(String id){return paid(id);}
  public void requireOnline(String id){if(!online(id))throw deny("Free 소유 공간은 오프라인 모드입니다. 서버 동기화와 공유는 Standard부터 사용할 수 있습니다.");}
- public void creation(String user){admission(user);if("free".equals(accountPlan(user).get("code"))&&store.coolingDown(user)>0)throw deny("마지막 워크스페이스 생성 후 24시간이 지나야 다시 만들 수 있습니다. 다음 생성 가능 시각: "+store.nextCreation(user));}
+ public void creation(String user){admission(user);}
  public void created(String user){store.created(user);}
  public Map<String,Object> accountStatus(String user){var result=new HashMap<String,Object>();result.put("plan",accountPlan(user));result.put("subscription",Optional.ofNullable(store.subscription(user)).orElse(Map.of()));result.put("nextCreationAt",store.nextCreation(user));result.put("billingConnected",false);return result;}
+ public long activeCount(String user){return store.owned(user).stream().filter(r->r.get("archivedAt")==null).count();}
+ public boolean paidAccount(String user){return !"free".equals(accountPlan(user).get("code"));}
+ public boolean hasSlot(String user){Long max=ownedLimit(user);return max==null||activeCount(user)<max;}
+ public void requireSpare(String user){if(!paidAccount(user)||activeCount(user)<2)throw deny("유료 플랜에서 소유한 활성 워크스페이스가 2개 이상이어야 합니다.");}
  public void admission(String user){spaces.lockAccountId(user);Long n=ownedLimit(user);long count=store.owned(user).stream().filter(r->r.get("archivedAt")==null).count();if(n!=null && count>=n)throw deny("소유한 활성 워크스페이스 한도를 초과합니다. 기존 공간을 정리하거나 플랜을 변경해주세요.");}
  public boolean selectedForWrite(String id){String owner=spaces.owner(id);Long n=ownedLimit(owner);if(n==null)return true;var active=store.owned(owner).stream().filter(r->r.get("archivedAt")==null).toList();for(int i=0;i<active.size();i++)if(id.equals(active.get(i).get("workspaceId")))return i<n;return false;}
  public void requireWrite(String id){requireOnline(id);if(!selectedForWrite(id))throw deny("소유 한도를 초과하여 조회 전용입니다. 사용할 워크스페이스를 선택해주세요.");}
@@ -39,7 +43,7 @@ import net.dogpoo.api.core.weaver.model.WeaverWorkspaceRequest;
  }
  public void validateMedia(String id,long additional){requireWrite(id);Long capacity=limit(plan(id),"storage_limit");if(capacity!=null && store.bytes(id)+additional>capacity)throw deny("저장 용량을 초과하여 첨부파일을 추가할 수 없습니다.");}
  public long bytes(String id){return store.bytes(id);}public long documents(String id){return store.documents(id);}
- public void validateRestore(String user,String id){if(!paid(id))throw deny("복원은 유료 플랜에서 가능합니다. 남은 보관 기간 안에 구독을 활성화해주세요.");admission(user);var p=plan(id);Long bytes=limit(p,"storage_limit"),docs=limit(p,"document_limit");if(bytes!=null&&store.bytes(id)>bytes || docs!=null&&store.documents(id)>docs)throw deny("복원할 공간의 자료가 현재 플랜 한도를 초과합니다.");}
+ public void validateRestore(String user,String id){if(!paid(id))throw deny("유료 플랜에서만 복원할 수 있습니다.");admission(user);var p=plan(id);Long bytes=limit(p,"storage_limit"),docs=limit(p,"document_limit");if(bytes!=null&&store.bytes(id)>bytes || docs!=null&&store.documents(id)>docs)throw deny("복원할 공간의 자료가 현재 플랜 한도를 초과합니다.");}
  public String sharingSuspensionReason(String id){
   if(online(id))return null;
   var subscription=store.subscription(spaces.owner(id));
