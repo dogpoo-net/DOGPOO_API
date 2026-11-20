@@ -93,7 +93,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   var seen=new HashSet<String>();
   for(var change:request.changes){valid(change.kind,change.id);String key=key(change.kind,change.id);if(!seen.add(key))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"중복 항목입니다.");
    var old=mapper.item(id,key);
-   if(old!=null && !old.deleted() && Set.of("list:elements","list:trash").contains(change.kind)){
+   if(old!=null && !old.deleted() && Set.of("list:elements","list:trash","list:workspacePhotos").contains(change.kind)){
     var removed=attachmentIds(old.payload());
     if(!change.deleted && change.value!=null)removed.removeAll(attachmentIds(change.value.toString()));
     removedMedia.addAll(removed);
@@ -113,7 +113,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
     String resource=editResource(c.kind,c.id,c.value,old==null?null:old.payload());
     if(!request.documentMerge && resource!=null && sharedEditing(documentLocks.active(id,WeaverAuthService.hash(resource))))action="unlocked_edit";
    }
-   history.record(id,actor,c.kind,c.id,old==null||old.deleted()?null:old.payload(),after,action);mapper.put(id,key(c.kind,c.id),c.kind,c.id,after,c.deleted,revision);if((c.kind.equals("list:notes")||c.kind.equals("list:elements")) && (old==null || !Objects.equals(old.payload(),after)))mapper.touch(id,key(c.kind,c.id),old==null?actor:null,actor);}
+   history.record(id,actor,c.kind,c.id,old==null||old.deleted()?null:old.payload(),after,action);mapper.put(id,key(c.kind,c.id),c.kind,c.id,after,c.deleted,revision);if((c.kind.equals("list:notes")||c.kind.equals("list:elements")||c.kind.equals("list:workspacePhotos")) && (old==null || !Objects.equals(old.payload(),after)))mapper.touch(id,key(c.kind,c.id),old==null?actor:null,actor);}
   if(!request.documentMerge && request.releaseAfterSave && request.resourceId!=null && !request.resourceId.startsWith("canvas:")){
    String token=request.documentLeases==null?null:request.documentLeases.get(request.resourceId);
    if(token!=null)documentLocks.release(id,WeaverAuthService.hash(request.resourceId),actor,WeaverAuthService.hash(token));
@@ -166,7 +166,9 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  }
  private Set<String> attachmentIds(String payload){
   var ids=new HashSet<String>();if(payload==null)return ids;
-  try{var record=json.readTree(payload);for(String field:List.of("photos","recordings"))for(var item:record.path(field)){String id=item.path("id").asText("");if(!id.isEmpty())ids.add(id);}}
+  try{var record=json.readTree(payload);
+   if(record.has("aspectRatio")){String id=record.path("id").asText("");if(!id.isEmpty())ids.add(id);}
+   for(String field:List.of("photos","recordings"))for(var item:record.path(field)){String id=item.path("id").asText("");if(!id.isEmpty())ids.add(id);}}
   catch(Exception ignored){/* Invalid legacy data must not authorize file deletion. */}return ids;
  }
  private void removeUnreferencedMedia(String user,Set<String> candidates){
