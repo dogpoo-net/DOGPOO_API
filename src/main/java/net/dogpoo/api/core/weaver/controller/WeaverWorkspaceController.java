@@ -18,6 +18,7 @@ public class WeaverWorkspaceController {
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceLifecycleService lifecycle;
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspacePolicyService policy;
  @org.springframework.beans.factory.annotation.Autowired private WeaverAudioTranscriptionService audio;
+ @org.springframework.beans.factory.annotation.Autowired private WeaverDocumentAiService documentAi;
  @org.springframework.beans.factory.annotation.Autowired private WeaverNotificationService notifications;
  private final WeaverSessionService sessions; private final WeaverWorkspaceService workspaces; private final String origin;
  public WeaverWorkspaceController(WeaverSessionService sessions,WeaverWorkspaceService workspaces,@Value("${WEAVER_WEB_ORIGIN:https://weaver.dogpoo.net}") String origin){this.sessions=sessions;this.workspaces=workspaces;this.origin=origin;}
@@ -100,6 +101,15 @@ public class WeaverWorkspaceController {
  @PostMapping("/admin/members") public Map<String,Object> adminMembers(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){return Map.of("members",policy.adminMembers((String)account(platform,r).get("id"),request.workspaceId));}
  @PostMapping("/admin/member-role") public Map<String,Object> adminMember(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverSharingRequest request){policy.adminMember((String)account(platform,r).get("id"),request.workspaceId,request.userId,request.role);return Map.of("updated",true);}
  @PostMapping("/admin/audit") public Map<String,Object> adminAudit(@PathVariable String platform,HttpServletRequest r){return Map.of("events",policy.audit((String)account(platform,r).get("id")));}
+ public record DocumentSummaryRequest(String workspaceId, List<String> thoughts, String material, String instruction, String length) {}
+ @PostMapping("/document/summarize")
+ public Map<String,Object> summarizeDocument(@PathVariable String platform, HttpServletRequest request,
+                                             @RequestBody DocumentSummaryRequest body) {
+  String actor = (String) account(platform, request).get("id");
+  sharing.access(actor, body.workspaceId(), true);
+  limits.check("document-summary:" + actor, 4);
+  return documentAi.summarize(body.thoughts(), body.material(), body.instruction(), body.length());
+ }
  @PostMapping("/audio/policy") public Map<String,Object> audioPolicy(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverWorkspaceRequest request){String actor=(String)account(platform,r).get("id");var target=sharing.access(actor,request.workspaceId,true);return audio.availability(actor);}
  @PostMapping("/audio/transcribe") public Map<String,Object> transcribe(@PathVariable String platform,HttpServletRequest r,@RequestBody WeaverWorkspaceRequest request){String actor=(String)account(platform,r).get("id");var target=sharing.access(actor,request.workspaceId,true);limits.check("transcribe:"+actor,3);return audio.transcribe(actor,request.data);}
  @PostMapping("/admin/audio-settings") public Map<String,Object> audioSettings(@PathVariable String platform,HttpServletRequest r){return audio.settings((String)account(platform,r).get("id"));}
