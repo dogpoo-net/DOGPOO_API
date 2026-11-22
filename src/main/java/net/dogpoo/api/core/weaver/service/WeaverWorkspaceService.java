@@ -206,7 +206,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  }
  public String editResource(String kind,String itemId,JsonNode value,String previous){
   try{
-   if("layout".equals(kind)){var path=json.readTree(itemId);if(!path.isArray() || path.size()<2)throw new IllegalArgumentException();return "blocks".equals(path.get(1).asText())?"canvas:boxes":"canvas:diagram";}
+   if("layout".equals(kind)){var path=json.readTree(itemId);if(!path.isArray() || path.size()<2)throw new IllegalArgumentException();return "blocks".equals(path.get(1).asText())?"canvas:boxes":null;}
    if("list:notes".equals(kind)){var before=previous==null?json.nullNode():json.readTree(previous);String id=value==null?"":value.path("project").path("id").asText("");if(id.isEmpty())id=before.path("project").path("id").asText("");return id.isEmpty()?null:id;}
    return null;
   }catch(Exception e){throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"편집 항목이 올바르지 않습니다.");}

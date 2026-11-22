@@ -49,11 +49,11 @@ class WeaverWorkspaceDatabaseTest {
  }
  @Test void concurrentCanvasPatchesAndDocumentCompareSave()throws Exception{
   service.read(a,email(a),0);jdbc.update("INSERT INTO WEAVER_WORKSPACE_MEMBER(workspace_id,user_id,role) VALUES(?,?,'editor')",a,b);
-  for(String scope:List.of("canvas:diagram","canvas:boxes","project-test")){
+  for(String scope:List.of("canvas:boxes","project-test")){
    boolean canvas=scope.startsWith("canvas:");var save=new WeaverWorkspaceRequest();
    if(canvas)save.canvasOperationId=UUID.randomUUID().toString().replace("-","").repeat(2);else{save.resourceId=scope;save.documentMerge=true;}
    var c=new WeaverWorkspaceRequest.Change();c.kind=canvas?"layout":"list:notes";
-   c.id=scope.equals("canvas:boxes")?"[\"page\",\"blocks\",\"positions\",\"one\"]":scope.equals("canvas:diagram")?"[\"page\",\"positions\",\"one\"]":"doc";
+   c.id=scope.equals("canvas:boxes")?"[\"page\",\"blocks\",\"positions\",\"one\"]":"doc";
    c.value=json.readTree(canvas?"[1,2]":"{\"project\":{\"id\":\"project-test\",\"document\":\"first\"}}");save.changes=List.of(c);
    var first=service.save(a,email(a),a,save,false);
    if(canvas)save.canvasOperationId=UUID.randomUUID().toString().replace("-","").repeat(2);
