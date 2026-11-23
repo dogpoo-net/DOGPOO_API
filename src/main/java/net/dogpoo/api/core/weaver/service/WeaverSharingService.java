@@ -31,7 +31,11 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   var result=new HashMap<String,Object>();
   if(policy!=null)list.replaceAll(row->{var decorated=policy.decorate(row);if("editor".equals(decorated.get("role"))&&!policy.editorAllowed((String)row.get("workspaceId"),user))decorated.put("role","viewer");return decorated;});
   list.removeIf(row->"owner".equals(row.get("role")) && "free".equals(row.get("plan")) && Boolean.TRUE.equals(row.get("quotaReadOnly")));
-  result.put("workspaces",list);result.put("defaultWorkspaceId",list.stream().filter(row->!Boolean.TRUE.equals(row.get("sharingSuspended"))).map(row->row.get("workspaceId")).findFirst().orElse(null));result.put("invitations",members.received(email));result.put("isAdmin",policy!=null&&policy.admin(user));if(policy!=null)result.put("accountPolicy",policy.accountStatus(user));return result;
+  String preferred=workspaces.preferredWorkspace(user);
+  result.put("workspaces",list);result.put("defaultWorkspaceId",list.stream().filter(row->!Boolean.TRUE.equals(row.get("sharingSuspended"))).map(row->row.get("workspaceId")).findFirst().orElse(null));result.put("primaryWorkspaceId",result.get("defaultWorkspaceId"));
+  if(preferred!=null && list.stream().anyMatch(row->preferred.equals(row.get("workspaceId")) && "owner".equals(row.get("role")) && !Boolean.TRUE.equals(row.get("sharingSuspended"))))
+    result.put("defaultWorkspaceId",preferred);
+  result.put("invitations",members.received(email));result.put("isAdmin",policy!=null&&policy.admin(user));if(policy!=null)result.put("accountPolicy",policy.accountStatus(user));return result;
  }
  private String workspaceName(String value){
   String name=value==null?"":value.strip();
@@ -48,6 +52,10 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   workspaces.lock(workspace);
   if(workspaces.archived(workspace))throw new ResponseStatusException(HttpStatus.GONE);
   if(!user.equals(workspaces.owner(workspace)))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소유자만 관리할 수 있습니다.");
+ }
+ @Transactional public void setDefaultWorkspace(String user,String workspace){
+  existingOwner(user,workspace);
+  workspaces.setPreferredWorkspace(user,workspace);
  }
  @Transactional public void renameWorkspace(String user,String workspace,String name){
   name=workspaceName(name);existingOwner(user,workspace);if(policy!=null&&!policy.paidAccount(user))throw WeaverWorkspacePolicyService.deny("무료 플랜의 기본 공간은 변경할 수 없습니다.");workspaces.rename(workspace,name);

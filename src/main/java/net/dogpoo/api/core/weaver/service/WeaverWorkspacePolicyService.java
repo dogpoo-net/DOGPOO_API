@@ -52,6 +52,14 @@ import net.dogpoo.api.core.weaver.model.WeaverWorkspaceRequest;
   return Boolean.TRUE.equals(cancelled) || cancelled instanceof Number n && n.intValue()!=0 ? "cancelled" : "expired";
  }
  public Map<String,Object> decorate(Map<String,Object> original){var row=new HashMap<>(original);String id=(String)row.get("workspaceId");var p=plan(id);row.put("plan",p.get("code"));row.put("limits",p);row.put("offline",!online(id));if(!"owner".equals(row.get("role"))){String reason=sharingSuspensionReason(id);row.put("sharingSuspended",reason!=null);if(reason!=null)row.put("subscriptionEndReason",reason);}row.put("quotaReadOnly",!selectedForWrite(id));return row;}
+ public Map<String,Map<String,Object>> workspaceUsage(String user){
+  var usage=new HashMap<String,Map<String,Object>>();
+  for(var space:spaces.owned(user)){
+   String id=(String)space.get("workspaceId");
+   usage.put(id,Map.of("bytes",store.bytes(id),"editors",1+members.editors(id),"viewers",members.viewers(id)));
+  }
+  return usage;
+ }
  public Map<String,Object> status(String id){var result=new HashMap<String,Object>();result.put("plan",plan(id));result.put("subscription",Optional.ofNullable(store.subscription(spaces.owner(id))).orElse(Map.of()));result.put("bytes",store.bytes(id));result.put("documents",store.documents(id));result.put("quotaReadOnly",!selectedForWrite(id));result.put("billingConnected",false);return result;}
  private void owner(String user,String id){if(id==null||!user.equals(spaces.owner(id)))throw new ResponseStatusException(HttpStatus.FORBIDDEN);spaces.lock(id);}
  @Transactional public Map<String,Object> cancel(String user,String id,boolean cancel){owner(user,id);if(store.cancel(user,cancel)!=1)throw deny("유효한 유료 구독이 없습니다.");store.audit(user,cancel?"cancel_at_end":"resume_subscription",user,"{}");if(notifications!=null)notifications.subscription(user,cancel?"구독 취소 예약":"구독 유지",cancel?"현재 이용 기간이 끝나면 Free 플랜으로 전환됩니다.":"구독 취소 예약이 해제되었습니다.");return status(id);}
