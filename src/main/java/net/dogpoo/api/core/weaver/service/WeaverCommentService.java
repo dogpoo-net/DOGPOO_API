@@ -7,6 +7,7 @@ import org.springframework.web.server.ResponseStatusException;
 import net.dogpoo.api.core.weaver.mapper.*;
 import net.dogpoo.api.core.weaver.model.*;
 @Service public class WeaverCommentService {
+ private static final java.util.regex.Pattern GRAPHEME = java.util.regex.Pattern.compile("\\X");
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspaceEvents events;
  @org.springframework.beans.factory.annotation.Autowired private WeaverNotificationService notifications;
  @org.springframework.beans.factory.annotation.Autowired private WeaverWorkspacePolicyService policy;
@@ -20,7 +21,7 @@ import net.dogpoo.api.core.weaver.model.*;
   if(write){
    if(policy!=null)policy.requireWrite(target.id());
    String content=r.content==null?"":r.content.strip();
-   if(content.isEmpty() || content.codePointCount(0,content.length())>4000 || r.requestId==null || !r.requestId.matches("[a-fA-F0-9-]{36}"))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"댓글은 1~4000자로 입력해주세요.");
+   if(content.isEmpty() || GRAPHEME.matcher(content).results().limit(501).count()>500 || r.requestId==null || !r.requestId.matches("[a-fA-F0-9-]{36}"))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"댓글은 1~500자로 입력해주세요.");
    var user=accounts.account(actor);if(user==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);WeaverAuthService.name(user.displayName());
    comments.add(target.id(),r.memoId,actor,r.requestId,content);
    var stored=comments.submitted(actor,r.requestId);

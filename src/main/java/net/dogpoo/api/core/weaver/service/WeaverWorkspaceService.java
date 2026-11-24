@@ -93,7 +93,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
   var seen=new HashSet<String>();
   for(var change:request.changes){valid(change.kind,change.id);String key=key(change.kind,change.id);if(!seen.add(key))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"중복 항목입니다.");
    var old=mapper.item(id,key);
-   if(old!=null && !old.deleted() && Set.of("list:elements","list:trash","list:workspacePhotos").contains(change.kind)){
+   if(old!=null && !old.deleted() && Set.of("list:elements","list:trash","list:notes","list:workspacePhotos").contains(change.kind)){
     var removed=attachmentIds(old.payload());
     if(!change.deleted && change.value!=null)removed.removeAll(attachmentIds(change.value.toString()));
     removedMedia.addAll(removed);
@@ -167,6 +167,8 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  private Set<String> attachmentIds(String payload){
   var ids=new HashSet<String>();if(payload==null)return ids;
   try{var record=json.readTree(payload);
+   var note = record.has("archivedDocument") ? record.path("archivedDocument") : record;
+   for(var video:note.path("videoIds"))if(video.asText().startsWith("video-"))ids.add(video.asText());
    if(record.has("aspectRatio")){String id=record.path("id").asText("");if(!id.isEmpty())ids.add(id);}
    for(String field:List.of("photos","recordings"))for(var item:record.path(field)){String id=item.path("id").asText("");if(!id.isEmpty())ids.add(id);}}
   catch(Exception ignored){/* Invalid legacy data must not authorize file deletion. */}return ids;
@@ -224,7 +226,7 @@ import net.dogpoo.api.core.weaver.mapper.*;import net.dogpoo.api.core.weaver.mod
  }
  private String legacyType(JsonNode workspace,String id){for(String group:List.of("elements","trash"))for(JsonNode record:workspace.path(group))for(JsonNode clip:record.path("recordings"))if(id.equals(clip.path("id").asText()))return "audio";return "image";}
  private void storeFile(String user,String id,String type,byte[] data){
-  if(!List.of("image","audio").contains(type))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"첨부 종류가 필요합니다.");
+  if(!List.of("image","audio","video").contains(type))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"첨부 종류가 필요합니다.");
   try {
    String key=WeaverAuthService.hash(id),hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(data));
    var old=mapper.media(user,key);
